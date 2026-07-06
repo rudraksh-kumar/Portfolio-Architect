@@ -1,0 +1,42 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String      @id @default(uuid())
+  email        String      @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  portfolio    Portfolio?
+}
+
+model Portfolio {
+  id           String      @id @default(uuid())
+  slug         String      @unique
+  userId       String      @unique
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profileData  String      // Stringified JSON matching PortfolioSchema
+  theme        String      @default("dark-glass")
+  views        Int         @default(0)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  chatLogs     ChatLog[]
+}
+
+model ChatLog {
+  id           String      @id @default(uuid())
+  portfolioId  String
+  portfolio    Portfolio   @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  visitorIp    String?
+  query        String
+  response     String
+  inferredOrg  String?
+  createdAt    DateTime    @default(now())
+}
