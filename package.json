@@ -14,8 +14,8 @@
     "build:client": "npm run build -w client",
     "build:server": "npm run build -w server",
     "db:generate": "npm run db:generate -w server",
-    "db:deploy": "npx prisma migrate deploy --schema=server/prisma/schema.prisma",
-    "build": "npm run db:generate && npm run build:client && npm run build:server",
+    "db:deploy": "npx prisma db push --schema=server/prisma/schema.prisma",
+    "build": "npm run db:generate && npm run db:deploy && npm run build:client && npm run build:server",
     "start": "npm run start -w server"
   },
   "devDependencies": {
