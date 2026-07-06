@@ -36,7 +36,11 @@ app.use('/api', apiRouter);
 
 // Serve static files from React build in production
 const clientDistPath = path.resolve(__dirname, '../../client/dist');
+console.log(`[Server] Client build path: ${clientDistPath}`);
+console.log(`[Server] Client build exists: ${fs.existsSync(clientDistPath)}`);
+
 if (fs.existsSync(clientDistPath)) {
+  console.log(`[Server] Serving static files from: ${clientDistPath}`);
   app.use(express.static(clientDistPath));
   
   // Wildcard route to serve index.html for React SPA
@@ -46,6 +50,8 @@ if (fs.existsSync(clientDistPath)) {
     }
     res.sendFile(path.join(clientDistPath, 'index.html'));
   });
+} else {
+  console.warn(`[Server] WARNING: client/dist folder was not found!`);
 }
 
 // Global Error Handler
