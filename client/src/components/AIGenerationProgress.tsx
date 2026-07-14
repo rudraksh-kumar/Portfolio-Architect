@@ -23,7 +23,7 @@ interface AIGenerationProgressProps {
   onCancel: () => void;
 }
 
-// 12 AI pipeline tasks
+// 12 pipeline tasks
 const PIPELINE_TASKS = [
   "Reading Resume",
   "Understanding LinkedIn Profile",
@@ -33,7 +33,7 @@ const PIPELINE_TASKS = [
   "Analyzing Career Strengths",
   "Generating About Section",
   "Improving Project Descriptions",
-  "Building AI Knowledge Base",
+  "Building Knowledge Base",
   "Choosing Portfolio Layout",
   "Optimizing for Recruiters",
   "Publishing Portfolio"
@@ -42,9 +42,9 @@ const PIPELINE_TASKS = [
 // Target progress milestones for each task
 const MILESTONES = [8, 16, 25, 33, 42, 50, 58, 67, 75, 83, 92, 100];
 
-// AI Career Insights (Step 2)
+// Career Insights (Step 2)
 const AI_INSIGHTS = [
-  "You have strong experience in React, Node.js and AI. We'll highlight you as a Full Stack AI Developer.",
+  "You have strong experience in React, Node.js and systems engineering. We'll highlight you as a Full Stack Software Developer.",
   "We detected multiple competitive programming achievements. We'll create a dedicated achievements section.",
   "Your internship demonstrates backend engineering experience. We'll emphasize production-ready software development.",
   "Your projects demonstrate increasing technical complexity. We'll arrange them in that order."
@@ -303,13 +303,13 @@ export const AIGenerationProgress: React.FC<AIGenerationProgressProps> = ({
             <div className="space-y-1">
               <div className="inline-flex items-center space-x-2 px-3 py-1 bg-purple-950/40 border border-purple-800/30 rounded-full text-purple-400 text-xs font-semibold">
                 <Sparkles className="h-3 w-3 animate-spin" style={{ animationDuration: '3s' }} />
-                <span>AI Career Architect Console v2.0</span>
+                <span>Career Architect Console v2.0</span>
               </div>
               <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white font-heading">
                 Building Your Personal Brand
               </h1>
               <p className="text-xs md:text-sm text-gray-400 max-w-2xl leading-relaxed">
-                Our AI is analyzing your experience, improving your content, and creating a recruiter-ready portfolio.
+                Our system is analyzing your experience, improving your content, and creating a recruiter-ready portfolio.
               </p>
             </div>
 
@@ -544,7 +544,7 @@ export const AIGenerationProgress: React.FC<AIGenerationProgressProps> = ({
                   <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 rounded-full filter blur-xl" />
 
                   <h2 className="text-sm font-bold uppercase tracking-wider text-purple-400 mb-3 flex items-center justify-between">
-                    <span>AI Reasoning Classifier</span>
+                    <span>Reasoning Classifier</span>
                     <span className="text-[10px] font-mono text-gray-500">Step 4</span>
                   </h2>
 
@@ -552,7 +552,7 @@ export const AIGenerationProgress: React.FC<AIGenerationProgressProps> = ({
                     <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
                       <div>
                         <span className="text-[10px] text-gray-500 uppercase tracking-wider block font-bold">Primary Identity</span>
-                        <span className="text-sm font-bold text-white">Full Stack AI Developer</span>
+                        <span className="text-sm font-bold text-white">Full Stack Software Developer</span>
                       </div>
                       <div className="text-right">
                         <span className="text-[10px] text-gray-500 uppercase tracking-wider block font-bold">Confidence</span>
@@ -624,7 +624,7 @@ export const AIGenerationProgress: React.FC<AIGenerationProgressProps> = ({
                       
                       <div className="bg-purple-950/20 p-2.5 rounded-lg border border-purple-900/30">
                         <span className="text-[10px] text-purple-400 uppercase tracking-wider font-bold block mb-1">
-                          AI Enhanced
+                          Enhanced
                         </span>
                         <p className="text-gray-200 font-semibold leading-relaxed">
                           "{CONTENT_IMPROVEMENTS[improvementIndex].improved}"
@@ -676,7 +676,7 @@ export const AIGenerationProgress: React.FC<AIGenerationProgressProps> = ({
               </div>
               <div className="space-y-1 flex-grow">
                 <span className="text-[10px] uppercase font-bold text-purple-400 tracking-wider block">
-                  AI Context Insight
+                  Context Insight
                 </span>
                 <div className="h-10 overflow-hidden relative">
                   <AnimatePresence mode="wait">
@@ -704,7 +704,7 @@ export const AIGenerationProgress: React.FC<AIGenerationProgressProps> = ({
               </div>
               <div className="space-y-1 flex-grow">
                 <span className="text-[10px] uppercase font-bold text-indigo-400 tracking-wider block">
-                  AI Recommendation
+                  Recommendation
                 </span>
                 <AnimatePresence mode="wait">
                   {displayedProgress >= 70 ? (
@@ -751,7 +751,7 @@ export const AIGenerationProgress: React.FC<AIGenerationProgressProps> = ({
                       {displayedProgress >= 90 ? (
                         <p><strong>Layout:</strong> placed Projects before Experience as projects are your strongest asset.</p>
                       ) : (
-                        <p><strong>Theme:</strong> selected Developer Theme because of your GitHub and AI projects.</p>
+                        <p><strong>Theme:</strong> selected Developer Theme because of your GitHub and systems projects.</p>
                       )}
                     </motion.div>
                   ) : (
@@ -792,7 +792,7 @@ export const AIGenerationProgress: React.FC<AIGenerationProgressProps> = ({
               {/* Completion Header */}
               <div className="text-center space-y-2">
                 <h1 className="text-3xl md:text-4xl font-extrabold text-white font-heading tracking-tight">
-                  Your AI Portfolio is Ready!
+                  Your Portfolio is Ready!
                 </h1>
                 <p className="text-gray-400 text-sm max-w-md mx-auto">
                   Your personalized bento-grid website and recruiter copilot are published.
@@ -808,15 +808,15 @@ export const AIGenerationProgress: React.FC<AIGenerationProgressProps> = ({
               >
                 <div className="flex items-center space-x-2 text-purple-400 text-xs font-bold uppercase tracking-wider pb-3 border-b border-white/5">
                   <Sparkles className="h-4 w-4" />
-                  <span>AI Career Summary</span>
+                  <span>Career Summary</span>
                 </div>
                 
                 <p className="text-xs leading-relaxed text-gray-300">
-                  Based on your resume and skills, the AI Architect has compiled a profile emphasizing:
+                  Based on your resume and skills, the system has compiled a profile emphasizing:
                 </p>
 
                 <div className="grid grid-cols-2 gap-2.5">
-                  {["Full Stack Development", "AI Applications", "Competitive Programming", "Backend Engineering"].map((field, idx) => (
+                  {["Full Stack Development", "Systems Engineering", "Competitive Programming", "Backend Engineering"].map((field, idx) => (
                     <div key={field} className="flex items-center space-x-2 bg-white/5 px-3 py-2 rounded-xl border border-white/5">
                       <span className="text-[11px] text-purple-400 font-bold font-mono">#{idx + 1}</span>
                       <span className="text-xs font-semibold text-gray-200">{field}</span>

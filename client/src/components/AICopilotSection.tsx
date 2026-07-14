@@ -123,7 +123,7 @@ const AICopilotSection: React.FC<AICopilotSectionProps> = ({ basics, slug }) => 
           if (typeof navigator !== 'undefined' && (navigator as any).brave && typeof (navigator as any).brave.isBrave === 'function') {
             (navigator as any).brave.isBrave().then((isBrave: boolean) => {
               if (isBrave) {
-                setMicError("Brave Browser has completely removed Google Speech-to-Text integration to protect your privacy. You can still type your questions and hear the AI speak answers aloud! For the full microphone experience, please open this page in Chrome or Edge.");
+                setMicError("Brave Browser has completely removed Google Speech-to-Text integration to protect your privacy. You can still type your questions and hear the system speak answers aloud! For the full microphone experience, please open this page in Chrome or Edge.");
               } else {
                 setMicError("Speech recognition network error. This browser API requires an active internet connection. Please verify your connection and try speaking again.");
               }
@@ -332,9 +332,9 @@ const AICopilotSection: React.FC<AICopilotSectionProps> = ({ basics, slug }) => 
         let errMsg = data.error || "Unable to reach the server.";
         
         if (errMsg.includes('503') || errMsg.toLowerCase().includes('high demand') || errMsg.toLowerCase().includes('quota') || errMsg.includes('429')) {
-          errMsg = "My AI brain is currently experiencing unusually high traffic from Google's servers! 🧠⚡ Please wait a few seconds and try asking again.";
+          errMsg = "My brain is currently experiencing unusually high traffic from Google's servers! 🧠⚡ Please wait a few seconds and try asking again.";
         } else if (errMsg.includes('API key not valid')) {
-          errMsg = "My AI systems are currently offline due to a configuration error. Please try again later.";
+          errMsg = "My systems are currently offline due to a configuration error. Please try again later.";
         } else {
           errMsg = "Oops, I ran into a technical snag: " + errMsg;
         }
@@ -417,7 +417,7 @@ const AICopilotSection: React.FC<AICopilotSectionProps> = ({ basics, slug }) => 
               <Bot className="text-purple-400 w-6 h-6" />
             </div>
             <h2 className="text-3xl md:text-5xl font-heading font-bold text-white leading-[1.3]">
-              AI Career <span className="text-gradient py-2 inline-block">Copilot.</span>
+              Career <span className="text-gradient py-2 inline-block">Copilot.</span>
             </h2>
           </div>
           <p className="text-gray-400 font-sans text-center max-w-2xl text-base">
@@ -447,7 +447,7 @@ const AICopilotSection: React.FC<AICopilotSectionProps> = ({ basics, slug }) => 
                       <span className="w-[2px] bg-green-500 rounded-full animate-[pulseWave_0.8s_infinite_ease-in-out_alternate]" style={{ height: '100%', animationDelay: '150ms' }} />
                       <span className="w-[2px] bg-green-500 rounded-full animate-[pulseWave_0.8s_infinite_ease-in-out_alternate]" style={{ height: '45%', animationDelay: '300ms' }} />
                     </span>
-                    AI is speaking...
+                    Copilot is speaking...
                   </div>
                 ) : isListening ? (
                   <div className="flex items-center gap-1.5 text-xs text-red-500 font-medium animate-fadeIn mt-0.5">

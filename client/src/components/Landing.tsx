@@ -145,7 +145,7 @@ export const Landing: React.FC<LandingProps> = ({ token, onAuthSuccess, onGenera
           <div className="bg-purple-600 p-2 rounded-xl">
             <Sparkles className="h-6 w-6 text-white" />
           </div>
-          <span className="text-xl font-bold tracking-tight font-heading">AI Portfolio Architect</span>
+          <span className="text-xl font-bold tracking-tight font-heading">Portfolio Architect</span>
         </div>
         {token ? (
           <button 
@@ -178,7 +178,7 @@ export const Landing: React.FC<LandingProps> = ({ token, onAuthSuccess, onGenera
             </h1>
             
             <p className="text-gray-400 text-lg md:text-xl font-normal leading-relaxed">
-              Upload your resume and links. Our AI reads your code, refines your achievements, and bakes a custom bento portfolio website equipped with a recruiter copilot.
+              Upload your resume and links. Our system reads your code, refines your achievements, and bakes a custom bento portfolio website equipped with a recruiter copilot.
             </p>
  
             <div className="pt-4 flex flex-col sm:flex-row justify-center items-center gap-4">
@@ -196,7 +196,7 @@ export const Landing: React.FC<LandingProps> = ({ token, onAuthSuccess, onGenera
         {step === 'upload' && (
           <div className="w-full max-w-xl glass-panel p-8 rounded-2xl shadow-2xl space-y-6">
             <h2 className="text-2xl font-bold tracking-tight text-gradient font-heading">Set Up Your Professional Identity</h2>
-            <p className="text-gray-400 text-sm">Provide your resume and links so our AI can understand and shape your career story.</p>
+            <p className="text-gray-400 text-sm">Provide your resume and links so our system can understand and shape your career story.</p>
 
             {generationError && (
               <div className="p-4 bg-red-900/20 border border-red-500/30 text-red-400 text-sm rounded-xl">

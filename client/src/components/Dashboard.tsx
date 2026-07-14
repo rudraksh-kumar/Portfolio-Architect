@@ -265,11 +265,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ token, onLogout, onViewPor
             </div>
 
             <h2 className="text-2xl font-bold tracking-tight text-gradient font-heading">
-              Set Up Your AI Portfolio
+              Set Up Your Portfolio
             </h2>
 
             <p className="text-gray-400 text-sm leading-relaxed">
-              You haven't generated a portfolio yet. Provide your resume and links so our AI can analyze your experience and design your recruiter-ready Bento site.
+              You haven't generated a portfolio yet. Provide your resume and links so our system can analyze your experience and design your recruiter-ready Bento site.
             </p>
 
             {/* Resume Upload Box */}
@@ -378,7 +378,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ token, onLogout, onViewPor
                         className="w-full px-4 py-2.5 rounded-lg text-left text-xs font-semibold flex items-center space-x-3 transition text-purple-400 hover:bg-gray-900 bg-purple-950/5 border border-purple-500/10"
                       >
                         <Sparkles className="h-3.5 w-3.5 animate-pulse" />
-                        <span>AI Chat Editor (Live)</span>
+                        <span>Live Chat Editor</span>
                       </button>
                       <button
                         onClick={() => {
@@ -398,7 +398,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ token, onLogout, onViewPor
                         className={`w-full px-4 py-2.5 rounded-lg text-left text-xs font-semibold flex items-center space-x-3 transition ${activeTab === 'rebuild' ? 'bg-purple-950/40 text-purple-400 border border-purple-900/10' : 'text-gray-400 hover:bg-gray-900'}`}
                       >
                         <RefreshCw className="h-3.5 w-3.5" />
-                        <span>Rebuild with AI</span>
+                        <span>Rebuild Portfolio</span>
                       </button>
                     </div>
                   )}
@@ -433,7 +433,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ token, onLogout, onViewPor
                     className="px-4 py-3 rounded-xl text-sm font-semibold flex items-center space-x-3 transition w-full whitespace-nowrap hover:bg-gray-900 text-purple-400 hover:text-purple-300 border border-purple-500/20 bg-purple-950/10"
                   >
                     <Sparkles className="h-4 w-4 animate-pulse" />
-                    <span>AI Chat Editor (Live)</span>
+                    <span>Live Chat Editor</span>
                   </button>
                   <button
                     onClick={() => setActiveTab('settings')}
@@ -455,7 +455,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ token, onLogout, onViewPor
                     }`}
                   >
                     <RefreshCw className="h-4 w-4" />
-                    <span>Rebuild with AI</span>
+                    <span>Rebuild Portfolio</span>
                   </button>
                 </aside>
               </>
@@ -608,7 +608,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ token, onLogout, onViewPor
                       }}
                       className="px-5 py-2.5 border border-gray-800 hover:border-gray-700 bg-gray-900/50 text-gray-300 hover:text-white font-semibold rounded-xl text-sm flex items-center space-x-2 transition"
                     >
-                      <span>Visual AI Editor</span>
+                      <span>Visual Editor</span>
                     </button>
                     <button
                       onClick={() => {
@@ -616,13 +616,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ token, onLogout, onViewPor
                           JSON.parse(editedJson);
                           setIsChatEditorOpen(true);
                         } catch (e) {
-                          alert('Please fix any JSON errors in the editor before opening the AI Chat Editor.');
+                          alert('Please fix any JSON errors in the editor before opening the Live Chat Editor.');
                         }
                       }}
                       className="px-5 py-2.5 border border-purple-500/30 hover:border-purple-500/50 bg-purple-950/20 text-purple-400 hover:text-purple-300 font-semibold rounded-xl text-sm flex items-center space-x-2 transition"
                     >
                       <Sparkles className="h-4 w-4 animate-pulse" />
-                      <span>AI Chat Editor</span>
+                      <span>Live Chat Editor</span>
                     </button>
                     <button
                       onClick={handleSaveChanges}
@@ -715,7 +715,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ token, onLogout, onViewPor
 
                   {/* design personalize customizer */}
                   <div className="space-y-2 pt-2">
-                    <label className="block text-sm font-semibold text-gray-300">AI Design Personalization Engine</label>
+                    <label className="block text-sm font-semibold text-gray-300">Design Personalization Engine</label>
                     <button
                       onClick={() => {
                         try {
@@ -732,7 +732,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ token, onLogout, onViewPor
                       className="w-full py-3.5 border border-purple-500/35 hover:border-purple-500/55 bg-purple-950/20 text-purple-400 hover:text-purple-300 font-bold rounded-xl text-sm flex items-center justify-center space-x-2 transition"
                     >
                       <Palette className="h-4.5 w-4.5" />
-                      <span>Open AI Design Customizer</span>
+                      <span>Open Design Customizer</span>
                     </button>
                   </div>
 
@@ -760,11 +760,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ token, onLogout, onViewPor
                 </div>
 
                 <h3 className="text-xl font-bold tracking-tight text-gradient font-heading">
-                  Rebuild Your Portfolio with AI
+                  Rebuild Your Portfolio
                 </h3>
 
                 <p className="text-gray-400 text-sm leading-relaxed">
-                  Want to completely rebuild or update your portfolio with a new resume? Upload your updated resume PDF and optional details below. Our AI will analyze your new credentials and generate a fresh design.
+                  Want to completely rebuild or update your portfolio with a new resume? Upload your updated resume PDF and optional details below. Our system will analyze your new credentials and generate a fresh design.
                 </p>
 
                 {/* Resume Upload Box */}

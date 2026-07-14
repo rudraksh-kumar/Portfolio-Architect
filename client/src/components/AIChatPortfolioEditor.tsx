@@ -442,9 +442,9 @@ export const AIChatPortfolioEditor: React.FC<AIChatPortfolioEditorProps> = ({
         const data = await response.json();
         if (response.ok && data.updatedPortfolio) {
           updatedData = data.updatedPortfolio;
-          actionName = 'AI Content Edit';
-          explanation = `I updated your portfolio data using Groq LLM to apply your request: "${userPrompt}"`;
-          toastMsg = '✓ Portfolio updated using Groq AI';
+          actionName = 'Content Edit';
+          explanation = `I updated your portfolio data to apply your request: "${userPrompt}"`;
+          toastMsg = '✓ Portfolio updated';
           responseText = `Successfully applied changes to your portfolio copy/content.`;
           llmSuccess = true;
         } else {
@@ -850,7 +850,7 @@ export const AIChatPortfolioEditor: React.FC<AIChatPortfolioEditorProps> = ({
             <div>
               <h2 className="font-bold text-base flex items-center space-x-2">
                 <Sparkles className="h-4 w-4 text-purple-500 animate-pulse" />
-                <span>AI Live Editor</span>
+                <span>Live Editor</span>
               </h2>
               <span className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Active Slug: /p/{slug}</span>
             </div>
@@ -984,7 +984,7 @@ export const AIChatPortfolioEditor: React.FC<AIChatPortfolioEditorProps> = ({
                 )}
               </div>
               <span className="text-[9px] text-gray-600 px-1">
-                {m.sender === 'user' ? 'You' : 'AI Architect'} • {m.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {m.sender === 'user' ? 'You' : 'Editor Assistant'} • {m.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>
           ))}
@@ -1062,7 +1062,7 @@ export const AIChatPortfolioEditor: React.FC<AIChatPortfolioEditorProps> = ({
               }}
               disabled={isThinking}
               maxLength={1000}
-              placeholder="Ask AI to style, rewrite, or structure your portfolio..."
+              placeholder="Type instructions to style, rewrite, or structure your portfolio..."
               className="w-full pl-4 pr-12 py-3 bg-gray-900/50 border border-gray-800 rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition disabled:opacity-50"
             />
             <button

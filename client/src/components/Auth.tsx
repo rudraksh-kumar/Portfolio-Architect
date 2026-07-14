@@ -62,7 +62,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, initialMode = 'login' }) 
           <p className="text-gray-400 mt-2">
             {mode === 'login' 
               ? 'Access your personal branding dashboard' 
-              : 'Start building your AI portfolio website'}
+              : 'Start building your portfolio website'}
           </p>
         </div>
 

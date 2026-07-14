@@ -405,7 +405,7 @@ export const AIPortfolioPersonalize: React.FC<AIPortfolioPersonalizeProps> = ({
               <span>Personalize Your Portfolio</span>
             </h1>
             <p className="text-[11px] text-gray-400">
-              Our AI analyzed your profile and selected the best portfolio style for you. Customize layout choices below.
+              Our system analyzed your profile and selected the best portfolio style for you. Customize layout choices below.
             </p>
           </div>
         </div>
@@ -454,7 +454,7 @@ export const AIPortfolioPersonalize: React.FC<AIPortfolioPersonalizeProps> = ({
               <div className="flex justify-between items-center">
                 <span className="text-[10px] bg-purple-900/40 border border-purple-500/30 px-3 py-1 rounded-full text-purple-400 font-bold uppercase tracking-wider flex items-center space-x-1.5">
                   <Sparkles className="h-3 w-3 animate-pulse" />
-                  <span>AI Recommended Theme</span>
+                  <span>Recommended Theme</span>
                 </span>
                 <span className="text-xs font-semibold text-gray-400 font-mono">Confidence: <strong className="text-purple-400">95%</strong></span>
               </div>
@@ -472,7 +472,7 @@ export const AIPortfolioPersonalize: React.FC<AIPortfolioPersonalizeProps> = ({
                   className="px-4 py-2 bg-purple-650 hover:bg-purple-700 text-white text-[10px] font-bold rounded-xl flex items-center space-x-1.5 transition"
                 >
                   <Zap className="h-3 w-3" />
-                  <span>AI Selection</span>
+                  <span>System Selection</span>
                 </button>
                 <button
                   onClick={handleResetToDefaults}
@@ -498,7 +498,7 @@ export const AIPortfolioPersonalize: React.FC<AIPortfolioPersonalizeProps> = ({
             >
               <div className="flex items-center space-x-2">
                 <Info className="h-4 w-4 text-purple-400" />
-                <h3 className="text-sm font-bold text-white">Why did AI choose this design?</h3>
+                <h3 className="text-sm font-bold text-white">Why was this design chosen?</h3>
               </div>
               {expandedSections.reasoning ? <ChevronUp className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
             </div>
@@ -895,7 +895,7 @@ export const AIPortfolioPersonalize: React.FC<AIPortfolioPersonalizeProps> = ({
           {/* SECTION 11: AI PERSONAL BRAND SUMMARY */}
           <div className="glass-panel border-white/5 bg-[#121215]/60 p-6 rounded-2xl shadow-md space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider text-purple-400">Your AI Personal Brand</h3>
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider text-purple-400">Your Personal Brand</h3>
               <span className="text-[10px] font-semibold text-gray-500">Resume Synthesis Verdict</span>
             </div>
 

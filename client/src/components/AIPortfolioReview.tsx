@@ -504,10 +504,10 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
           <div>
             <h1 className="text-lg font-bold text-white font-heading leading-tight flex items-center space-x-2">
               <Sparkles className="h-4 w-4 text-purple-400" />
-              <span>Review Your AI Understanding</span>
+              <span>Review Your Generated Profile</span>
             </h1>
             <p className="text-[11px] text-gray-400">
-              Our AI analyzed your resume and built your professional profile. Review everything before we generate your portfolio.
+              Our system analyzed your resume and built your professional profile. Review everything before we generate your portfolio.
             </p>
           </div>
         </div>
@@ -712,7 +712,7 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
               </div>
               <div className="space-y-1 text-left">
                 <h3 className="text-sm font-bold text-white">Portfolio Readiness Score</h3>
-                <p className="text-xs text-gray-400">AI analysis indicates your profile has high recruiter appeal and visual cohesion.</p>
+                <p className="text-xs text-gray-400">Analysis indicates your profile has high recruiter appeal and visual cohesion.</p>
               </div>
             </div>
 
@@ -742,7 +742,7 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
             >
               <div className="flex items-center space-x-2">
                 <FileText className="h-4 w-4 text-purple-400" />
-                <h3 className="text-sm font-bold text-white">AI Summary</h3>
+                <h3 className="text-sm font-bold text-white">Executive Summary</h3>
                 <span className="text-[10px] bg-purple-950/40 border border-purple-500/20 px-2 py-0.5 rounded-full text-purple-400 font-bold">96% Confidence</span>
               </div>
               {expandedSections.summary ? <ChevronUp className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
@@ -1020,7 +1020,7 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
                     <div className="bg-purple-950/20 border border-purple-900/30 p-3 rounded-xl flex items-start space-x-2 text-xs">
                       <Sparkles className="h-4 w-4 text-purple-400 shrink-0 mt-0.5" />
                       <div className="space-y-0.5">
-                        <span className="text-[9px] uppercase font-bold text-purple-400 block tracking-wider">AI Highlight</span>
+                        <span className="text-[9px] uppercase font-bold text-purple-400 block tracking-wider">Key Highlight</span>
                         <p className="text-gray-300 font-medium leading-relaxed">
                           "{proj.challengesSolved || 'Demonstrates architectural skills and problem-solving techniques.'}"
                         </p>
@@ -1093,7 +1093,7 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
                       </div>
 
                       <div className="space-y-1">
-                        <span className="text-[9px] uppercase font-bold text-gray-500 tracking-wider block">AI Generated Description</span>
+                        <span className="text-[9px] uppercase font-bold text-gray-500 tracking-wider block">Generated Description</span>
                         <ul className="list-disc pl-4 space-y-1 text-xs text-gray-400">
                           {exp.bullets.map((b, i) => (
                             <li key={i}>{b}</li>
@@ -1275,9 +1275,9 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
             )}
           </div>
 
-          {/* SECTION 9: AI IMPROVEMENT SUGGESTIONS */}
+          {/* SECTION 9: IMPROVEMENT SUGGESTIONS */}
           <div className="glass-panel border-white/5 bg-[#121215]/60 p-6 rounded-2xl shadow-md space-y-4">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider text-purple-400">AI Quality Polish Engine</h3>
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider text-purple-400">Quality Polish Engine</h3>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div className="bg-black/20 border border-white/5 p-3.5 rounded-2xl flex flex-col justify-between space-y-3">
@@ -1323,7 +1323,7 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
             >
               <div className="flex items-center space-x-2">
                 <HelpCircle className="h-4 w-4 text-purple-400" />
-                <h3 className="text-sm font-bold text-white">Why did AI make these choices?</h3>
+                <h3 className="text-sm font-bold text-white">Why were these choices made?</h3>
               </div>
               {expandedSections.decisions ? <ChevronUp className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
             </div>
@@ -1368,7 +1368,7 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
           <button 
             onClick={() => {
-              if (confirm('Are you sure you want to reset all modifications to initial AI understanding?')) {
+              if (confirm('Are you sure you want to reset all modifications to the initial profile data?')) {
                 setPortfolioData(initialData);
                 setTempBio(initialData.basics.bio);
                 setTempTitle(initialData.basics.professionalTitle);
