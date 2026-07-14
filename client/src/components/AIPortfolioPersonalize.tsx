@@ -17,8 +17,12 @@ import {
   ChevronDown, 
   MoveUp, 
   MoveDown,
-  Info
+  Info,
+  AlertCircle,
+  CheckCircle2,
+  ExternalLink
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { PortfolioData } from '../types.js';
 import { PortfolioView } from './PortfolioView.js';
 
@@ -93,64 +97,93 @@ const ANIMATIONS = [
   { name: 'Gradient Glow', desc: 'Color glows moving dynamically along card borders.' }
 ];
 
-// Personality overrides (Section 10)
 const PERSONALITIES: Record<string, {
   bio: string;
-  tagline: string;
+  tagline: {
+    heading: string;
+    explanation: string;
+  };
   projectDesc: string;
   reason: string;
 }> = {
   Professional: {
     bio: "Accomplished software engineer dedicated to building performant and clean full-stack web architectures. Skilled at translating product scope into structured, production-ready modules.",
-    tagline: "Software Engineer specializing in building highly performant, secure, and scalable web applications that deliver exceptional business value",
+    tagline: {
+      heading: "Software Engineer",
+      explanation: "Specializing in building highly performant, secure, and scalable web applications that deliver exceptional business value."
+    },
     projectDesc: "Engineered a low-latency, scalable platform optimization module supporting high user loads.",
     reason: "Emphasizes corporate standards, technical reliability, and clear manager-level readability."
   },
   'Startup Founder': {
     bio: "Product-focused developer building from zero to one. Obsessed with high delivery rates, user interaction paradigms, rapid prototyping, and business scalability metrics.",
-    tagline: "Building scalable products with a focus on shipping fast, solving user problems, and rapid prototyping",
+    tagline: {
+      heading: "Startup Developer",
+      explanation: "Building scalable products with a focus on shipping fast, solving user problems, and rapid prototyping."
+    },
     projectDesc: "Designed and launched an end-to-end user acquisition tool from scratch in 3 weeks.",
     reason: "Expresses rapid ship speeds, product vision, entrepreneurial drive, and high velocity."
   },
   Researcher: {
     bio: "Computer scientist specializing in algorithmic design, data validation models, and exploring the mathematical limitations of machine learning systems.",
-    tagline: "Exploring algorithmic complexity to engineer data-driven solutions that solve complex mathematical constraints",
+    tagline: {
+      heading: "Computer Scientist",
+      explanation: "Exploring algorithmic complexity to engineer data-driven solutions that solve complex mathematical constraints."
+    },
     projectDesc: "Authored experimental algorithms solving complex path optimization constraints.",
     reason: "Emphasizes academic accuracy, analytics depth, structured methodologies, and proofs."
   },
   Creative: {
     bio: "Design-minded developer operating at the intersection of beautiful aesthetic interfaces and fluid web layouts. Crafting high-grade interactive experiences.",
-    tagline: "Designing immersive user interfaces with a focus on crafting memorable and highly interactive digital experiences",
+    tagline: {
+      heading: "Creative Developer",
+      explanation: "Designing immersive user interfaces with a focus on crafting memorable and highly interactive digital experiences."
+    },
     projectDesc: "Crafted an immersive interactive workspace mapping custom user audio loops.",
     reason: "Highlights visual design chops, visual aesthetics, storytelling, and UI polish."
   },
   Minimal: {
     bio: "Focused developer crafting lightweight code bases. Devoted to clean architectures, zero dependencies, and low CPU footprint software solutions.",
-    tagline: "Simplicity in design focusing on lightweight, performant code bases with zero unnecessary external dependencies",
+    tagline: {
+      heading: "Minimalist Developer",
+      explanation: "Simplicity in design focusing on lightweight, performant code bases with zero unnecessary external dependencies."
+    },
     projectDesc: "Wrote a lightweight, modular service with zero third-party packages.",
     reason: "Conveys focus on performance, minimal codebases, clean structure, and efficiency."
   },
   Friendly: {
     bio: "Hey! I am a software dev who loves pairing with teams, helping colleagues grow, and crafting software that brings real joy to people's day.",
-    tagline: "Building helpful applications focusing on fostering great team collaboration and delivering real joy to users",
+    tagline: {
+      heading: "Collaborative Developer",
+      explanation: "Building helpful applications focusing on fostering great team collaboration and delivering real joy to users."
+    },
     projectDesc: "Co-created a team task dashboard to align engineering workflows.",
     reason: "Conveys strong collaboration skills, approachability, and mentoring potential."
   },
   Confident: {
     bio: "High-performing architect skilled in spearheading complex microservice refactoring, optimizing data latency, and guiding teams toward technical landmarks.",
-    tagline: "Architecting high-availability systems with a focus on scaling engineering infrastructure and leading high-performing teams",
+    tagline: {
+      heading: "Solutions Architect",
+      explanation: "Architecting high-availability systems with a focus on scaling engineering infrastructure and leading high-performing teams."
+    },
     projectDesc: "Spearheaded migration of legacy services to modern clusters, reducing overhead by 40%.",
     reason: "Projects direct technical mastery, problem resolution capabilities, and tech control."
   },
   Executive: {
     bio: "Technical leader aligning code practices with high-level corporate goals. Scaling engineering velocity while mentoring developers toward personal landmarks.",
-    tagline: "Aligning high-impact engineering with a focus on building business strategy, mentoring teams, and scaling velocity",
+    tagline: {
+      heading: "Engineering Leader",
+      explanation: "Aligning high-impact engineering with a focus on building business strategy, mentoring teams, and scaling velocity."
+    },
     projectDesc: "Scaled an engineering team from 3 to 12 devs while implementing strict CI/CD guidelines.",
     reason: "Demonstrates resource scaling, strategic project planning, and organizational goals."
   },
   Developer: {
     bio: "Passionate full-stack developer who enjoys debugging backend services, crafting responsive client layouts, and scripting utility tools.",
-    tagline: "Full-stack developer specializing in building modern web applications with clean architecture and robust backend systems",
+    tagline: {
+      heading: "Full-Stack Developer",
+      explanation: "Specializing in building modern web applications with clean architecture and robust backend systems."
+    },
     projectDesc: "Built full-stack React application with Node.js backend and real-time sockets.",
     reason: "Projects general technical capabilities, full-stack coverage, and coding interest."
   }
@@ -184,6 +217,15 @@ export const AIPortfolioPersonalize: React.FC<AIPortfolioPersonalizeProps> = ({
     return initialData.personalityTone || 'Developer';
   });
   const [publishing, setPublishing] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  
+
+  const triggerToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast(null);
+    }, 4000);
+  };
 
   // Expandable sections mapping
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -335,7 +377,7 @@ export const AIPortfolioPersonalize: React.FC<AIPortfolioPersonalizeProps> = ({
       onPublish();
     } catch (err: any) {
       console.error(err);
-      alert(err.message || 'Error occurred during generation.');
+      triggerToast(err.message || 'Error occurred during generation.', 'error');
     } finally {
       setPublishing(false);
     }
@@ -832,7 +874,14 @@ export const AIPortfolioPersonalize: React.FC<AIPortfolioPersonalizeProps> = ({
                   
                   <div className="space-y-1">
                     <span className="text-[10px] text-purple-400 font-semibold block">Dynamic Tagline</span>
-                    <p className="text-xs font-medium text-white italic">"{currentTagline}"</p>
+                    <p className="text-xs font-medium text-white italic">
+                      "{(() => {
+                        const tagRaw = currentTagline as any;
+                        return tagRaw && typeof tagRaw === 'object'
+                          ? `${tagRaw.heading} - ${tagRaw.explanation}`
+                          : tagRaw;
+                      })()}"
+                    </p>
                   </div>
                   <div className="space-y-1 pt-1.5">
                     <span className="text-[10px] text-purple-400 font-semibold block">Dynamic Bio</span>
@@ -894,10 +943,19 @@ export const AIPortfolioPersonalize: React.FC<AIPortfolioPersonalizeProps> = ({
                   {/* Google Search Mock */}
                   <div className="bg-black/40 border border-white/5 p-4 rounded-xl space-y-1">
                     <span className="text-[10px] text-purple-400 font-mono">Google Preview</span>
-                    <h4 className="text-sm text-[#8ab4f8] hover:underline cursor-pointer font-medium truncate font-heading">
+                    <h4 
+                      className="text-sm text-[#8ab4f8] hover:underline cursor-pointer font-medium truncate font-heading"
+                      onClick={() => window.open(`/p/${slug}`, '_blank')}
+                    >
                       {initialData.basics.name} | {initialData.basics.professionalTitle}
                     </h4>
-                    <p className="text-[10px] text-[#006621] truncate font-mono">https://localhost:5173/p/{slug}</p>
+                    <p 
+                      className="text-[10px] text-[#006621] truncate font-mono hover:underline cursor-pointer flex items-center gap-1"
+                      onClick={() => window.open(`/p/${slug}`, '_blank')}
+                    >
+                      {window.location.origin}/p/{slug}
+                      <ExternalLink className="h-2.5 w-2.5 inline" />
+                    </p>
                     <p className="text-[11px] text-[#bdc1c6] line-clamp-2 leading-relaxed">
                       {currentBio}
                     </p>
@@ -906,15 +964,27 @@ export const AIPortfolioPersonalize: React.FC<AIPortfolioPersonalizeProps> = ({
                   {/* Open Graph / Social card mock */}
                   <div className="bg-black/40 border border-white/5 p-4 rounded-xl space-y-2">
                     <span className="text-[10px] text-purple-400 font-mono">Open Graph / Twitter Card Preview</span>
-                    <div className="border border-white/10 rounded-xl overflow-hidden bg-black">
+                    <div 
+                      className="border border-white/10 rounded-xl overflow-hidden bg-black hover:border-purple-500/50 transition cursor-pointer"
+                      onClick={() => window.open(`/p/${slug}`, '_blank')}
+                    >
                       <div className="h-28 bg-gradient-to-r from-purple-900 to-indigo-900 flex items-center justify-center relative p-4">
                         <div className="text-center space-y-1">
                           <h4 className="text-base font-bold text-white font-heading">{initialData.basics.name}</h4>
-                          <p className="text-[9px] text-purple-300 font-medium">{currentTagline}</p>
+                          <p className="text-[9px] text-purple-300 font-medium font-sans">
+                            {(() => {
+                              const tagRaw = currentTagline as any;
+                              return tagRaw && typeof tagRaw === 'object'
+                                ? `${tagRaw.heading} - ${tagRaw.explanation}`
+                                : tagRaw;
+                            })()}
+                          </p>
                         </div>
                       </div>
                       <div className="p-3 border-t border-white/5 bg-[#09090b]">
-                        <span className="text-[9px] text-gray-500 block uppercase font-bold font-mono">localhost:5173/p/{slug}</span>
+                        <span className="text-[9px] text-gray-500 block uppercase font-bold font-mono">
+                          {window.location.host}/p/{slug}
+                        </span>
                         <h5 className="text-[11px] font-bold text-white mt-1 font-heading">{initialData.basics.name} - portfolio</h5>
                         <p className="text-[10px] text-gray-400 line-clamp-1 mt-0.5">{currentBio}</p>
                       </div>
@@ -984,7 +1054,6 @@ export const AIPortfolioPersonalize: React.FC<AIPortfolioPersonalizeProps> = ({
         {/* RIGHT COLUMN: Interactive Live Real-Time Portfolio Preview */}
         <div className="hidden lg:block w-2/5 h-full bg-[#0a0a0f]/40 flex flex-col overflow-hidden relative border-l border-white/5 select-text">
 
-
           {/* Actual live rendering of the home page with custom state data */}
           <div className="flex-grow overflow-y-auto scrollbar-thin">
             <PortfolioView 
@@ -995,6 +1064,32 @@ export const AIPortfolioPersonalize: React.FC<AIPortfolioPersonalizeProps> = ({
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {toast && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className="fixed bottom-6 right-6 z-[9999]"
+          >
+            <div className={`px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-3 backdrop-blur-md border ${
+              toast.type === 'error' 
+                ? 'bg-red-950/70 border-red-500/30 text-red-200' 
+                : 'bg-green-950/70 border-green-500/30 text-green-200'
+            }`}>
+              {toast.type === 'error' ? (
+                <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
+              )}
+              <span className="text-xs font-semibold select-text">{toast.message}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 };

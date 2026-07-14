@@ -20,6 +20,7 @@ router.post('/portfolio/generate', authMiddleware, upload.single('resume'), Port
 router.get('/portfolio/me', authMiddleware, PortfolioController.getMe);
 router.put('/portfolio/me', authMiddleware, PortfolioController.updateMe);
 router.get('/portfolio/analytics', authMiddleware, PortfolioController.getAnalytics);
+router.post('/portfolio/ai/optimize', authMiddleware, PortfolioController.optimizeAI);
 
 // Public Portfolio Access Routes
 router.get('/portfolio/p/:slug', PortfolioController.getPublic);

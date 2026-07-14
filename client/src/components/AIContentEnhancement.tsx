@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Sparkles, 
-  Check, 
-  RefreshCw, 
-  Edit3, 
-  Plus, 
-  ArrowLeft, 
-  ArrowRight, 
-  Info, 
-  AlertTriangle, 
-  User, 
-  Briefcase, 
-  Code2, 
+import {
+  Sparkles,
+  Check,
+  RefreshCw,
+  Edit3,
+  Plus,
+  ArrowLeft,
+  ArrowRight,
+  Info,
+  AlertTriangle,
+  User,
+  Briefcase,
+  Code2,
   Activity,
   Layers,
   ThumbsUp,
@@ -20,10 +20,16 @@ import {
 } from 'lucide-react';
 import type { PortfolioData, ProjectItem } from '../types.js';
 
+import { calculatePortfolioMetrics, type ScoreBreakdown } from '../utils/scoring.js';
+
 interface AIContentEnhancementProps {
   initialData: PortfolioData;
   slug: string;
   token: string;
+  score: number;
+  setScore: React.Dispatch<React.SetStateAction<number>>;
+  breakdown: ScoreBreakdown;
+  setBreakdown: React.Dispatch<React.SetStateAction<ScoreBreakdown>>;
   onNext: (updatedData: PortfolioData) => void;
   onCancel: () => void;
 }
@@ -31,7 +37,10 @@ interface AIContentEnhancementProps {
 // Rewriting styles map
 const REWRITE_STYLES = {
   Professional: {
-    tagline: "Software Engineer specializing in building highly performant, secure, and scalable web applications that deliver exceptional business value",
+    tagline: {
+      heading: "Software Engineer",
+      explanation: "Specializing in building highly performant, secure, and scalable web applications that deliver exceptional business value."
+    },
     bio: "Accomplished software engineer dedicated to building performant and clean full-stack web architectures. Skilled at translating product scope into structured, production-ready modules.",
     bullets: {
       api: "Developed scalable REST APIs using Node.js and Express, improving backend maintainability and enabling seamless frontend integration.",
@@ -40,7 +49,10 @@ const REWRITE_STYLES = {
     }
   },
   'Startup Founder': {
-    tagline: "Building scalable products with a focus on shipping fast, solving user problems, and rapid prototyping",
+    tagline: {
+      heading: "Startup Developer",
+      explanation: "Building scalable products with a focus on shipping fast, solving user problems, and rapid prototyping."
+    },
     bio: "Product-focused developer building from zero to one. Obsessed with high delivery rates, user interaction paradigms, rapid prototyping, and business scalability metrics.",
     bullets: {
       api: "Designed and launched an end-to-end user acquisition tool from scratch in 3 weeks, handling backend APIs.",
@@ -49,7 +61,10 @@ const REWRITE_STYLES = {
     }
   },
   Researcher: {
-    tagline: "Exploring algorithmic complexity to engineer data-driven solutions that solve complex mathematical constraints",
+    tagline: {
+      heading: "Computer Scientist",
+      explanation: "Exploring algorithmic complexity to engineer data-driven solutions that solve complex mathematical constraints."
+    },
     bio: "Computer scientist specializing in algorithmic design, data validation models, and exploring the mathematical limitations of machine learning systems.",
     bullets: {
       api: "Engineered robust, secure APIs with strict interface schemas for mathematical model computation.",
@@ -58,7 +73,10 @@ const REWRITE_STYLES = {
     }
   },
   Creative: {
-    tagline: "Designing immersive user interfaces with a focus on crafting memorable and highly interactive digital experiences",
+    tagline: {
+      heading: "Creative Developer",
+      explanation: "Designing immersive user interfaces with a focus on crafting memorable and highly interactive digital experiences."
+    },
     bio: "Design-minded developer operating at the intersection of beautiful aesthetic interfaces and fluid web layouts. Crafting high-grade interactive experiences.",
     bullets: {
       api: "Crafted interactive APIs that powered a fluid, drag-and-drop web experience for client apps.",
@@ -67,7 +85,10 @@ const REWRITE_STYLES = {
     }
   },
   Minimal: {
-    tagline: "Simplicity in design focusing on lightweight, performant code bases with zero unnecessary external dependencies",
+    tagline: {
+      heading: "Minimalist Developer",
+      explanation: "Simplicity in design focusing on lightweight, performant code bases with zero unnecessary external dependencies."
+    },
     bio: "Focused developer crafting lightweight code bases. Devoted to clean architectures, zero dependencies, and low CPU footprint software solutions.",
     bullets: {
       api: "Authored lean, dependency-free API microservices in clean, self-documenting Node.js modules.",
@@ -76,7 +97,10 @@ const REWRITE_STYLES = {
     }
   },
   Developer: {
-    tagline: "Full-stack developer specializing in building modern web applications with clean architecture and robust backend systems",
+    tagline: {
+      heading: "Full-Stack Developer",
+      explanation: "Specializing in building modern web applications with clean architecture and robust backend systems."
+    },
     bio: "Passionate full-stack developer who enjoys debugging backend services, crafting responsive client layouts, and scripting utility tools.",
     bullets: {
       api: "Built full-stack APIs using Express and SQLite, supporting real-time web UI dashboard widgets.",
@@ -114,6 +138,10 @@ export const AIContentEnhancement: React.FC<AIContentEnhancementProps> = ({
   initialData,
   slug: _slug,
   token: _token,
+  score,
+  setScore,
+  breakdown,
+  setBreakdown,
   onNext,
   onCancel
 }) => {
@@ -132,15 +160,8 @@ export const AIContentEnhancement: React.FC<AIContentEnhancementProps> = ({
     };
   });
 
-  const [score, setScore] = useState(78); // Initial score before accept all
-  const [breakdown, setBreakdown] = useState({
-    writing: 74,
-    techDepth: 82,
-    recruiterAppeal: 76,
-    readiness: 80,
-    ats: 70,
-    storytelling: 88
-  });
+  const [baseScore] = useState(() => calculatePortfolioMetrics(initialData).score);
+  const [baseBreakdown] = useState(() => calculatePortfolioMetrics(initialData).enhancementBreakdown);
 
   // Accepting state trackers
   const [aboutAccepted, setAboutAccepted] = useState(false);
@@ -168,17 +189,26 @@ export const AIContentEnhancement: React.FC<AIContentEnhancementProps> = ({
   const [popupModal, setPopupModal] = useState<PopupModalConfig | null>(null);
 
   // Suggested skills to add
-  const [suggestedSkills, setSuggestedSkills] = useState([
-    { name: 'REST APIs', added: false, reason: 'Recommended based on Competitive Programming Tracker' },
-    { name: 'JWT Authentication', added: false, reason: 'Security standard for full-stack apps' },
-    { name: 'Responsive Design', added: false, reason: 'Bento layout responsive integration' },
-    { name: 'State Management', added: false, reason: 'Optimizes state updates in React' }
-  ]);
+  const [suggestedSkills, setSuggestedSkills] = useState(() => {
+    if (initialData.readinessAssessment?.suggestedSkills) {
+      return initialData.readinessAssessment.suggestedSkills.map(s => ({
+        name: s.name,
+        added: false,
+        reason: s.reason
+      }));
+    }
+    return [
+      { name: 'REST APIs', added: false, reason: 'Recommended based on projects' },
+      { name: 'JWT Authentication', added: false, reason: 'Security standard for full-stack apps' },
+      { name: 'Responsive Design', added: false, reason: 'Bento layout responsive integration' },
+      { name: 'State Management', added: false, reason: 'Optimizes state updates in React' }
+    ];
+  });
 
   // Missing info recommendations
   const [missingInfo, setMissingInfo] = useState([
     { key: 'github', label: 'GitHub Link', value: data.socials.github || '', desc: 'Adding GitHub allows recruiters to explore your active repositories directly.', added: !!data.socials.github },
-    { key: 'photo', label: 'Profile Photo URL', value: '', desc: 'Including a professional photo boosts dashboard views and personalization.', added: false },
+    //   { key: 'photo', label: 'Profile Photo URL', value: '', desc: 'Including a professional photo boosts dashboard views and personalization.', added: false },
     { key: 'deploy', label: 'Project Deployment Links', value: '', desc: 'Adding direct links allows recruiters to review live product implementations.', added: false }
   ]);
 
@@ -193,16 +223,16 @@ export const AIContentEnhancement: React.FC<AIContentEnhancementProps> = ({
     Object.values(projectAcceptance).forEach(v => { if (v) acceptCount += 1; });
 
     const scoreBoost = Math.min(acceptCount * 2.5, 20);
-    setScore(Math.round(78 + scoreBoost));
+    setScore(Math.min(Math.round(baseScore + scoreBoost), 100));
     setBreakdown({
-      writing: Math.min(Math.round(74 + scoreBoost * 1.2), 100),
-      techDepth: Math.min(Math.round(82 + scoreBoost * 0.8), 100),
-      recruiterAppeal: Math.min(Math.round(76 + scoreBoost * 1.1), 100),
-      readiness: Math.min(Math.round(80 + scoreBoost), 100),
-      ats: Math.min(Math.round(70 + scoreBoost * 1.3), 100),
-      storytelling: Math.min(Math.round(88 + scoreBoost * 0.5), 100)
+      writing: Math.min(Math.round(baseBreakdown.writing + scoreBoost * 1.2), 100),
+      techDepth: Math.min(Math.round(baseBreakdown.techDepth + scoreBoost * 0.8), 100),
+      recruiterAppeal: Math.min(Math.round(baseBreakdown.recruiterAppeal + scoreBoost * 1.1), 100),
+      readiness: Math.min(Math.round(baseBreakdown.readiness + scoreBoost), 100),
+      ats: Math.min(Math.round(baseBreakdown.ats + scoreBoost * 1.3), 100),
+      storytelling: Math.min(Math.round(baseBreakdown.storytelling + scoreBoost * 0.5), 100)
     });
-  }, [aboutAccepted, experienceAcceptance, projectAcceptance]);
+  }, [aboutAccepted, experienceAcceptance, projectAcceptance, baseScore, baseBreakdown, setScore, setBreakdown]);
 
   // Map original bullet styles for Experience Section
   const getOriginalBullet = (_expIndex: number, bulletIndex: number) => {
@@ -225,7 +255,7 @@ export const AIContentEnhancement: React.FC<AIContentEnhancementProps> = ({
     setRewritingStyle(styleKey);
     setTimeout(() => {
       const preset = REWRITE_STYLES[styleKey];
-      
+
       // Map experience bullets
       const updatedExperience = data.experience.map(exp => ({
         ...exp,
@@ -255,7 +285,7 @@ export const AIContentEnhancement: React.FC<AIContentEnhancementProps> = ({
       }));
 
       setAboutAccepted(true);
-      
+
       // Auto accept all bullets
       const expAcc: Record<string, boolean> = {};
       data.experience.forEach((_, eIdx) => {
@@ -310,7 +340,7 @@ export const AIContentEnhancement: React.FC<AIContentEnhancementProps> = ({
   // Final confirmation
   const handleAcceptAll = () => {
     setAboutAccepted(true);
-    
+
     // Accept all experience bullets
     const expAcc: Record<string, boolean> = {};
     data.experience.forEach((_, eIdx) => {
@@ -330,7 +360,7 @@ export const AIContentEnhancement: React.FC<AIContentEnhancementProps> = ({
 
   return (
     <div className="fixed inset-0 w-screen h-screen bg-[#070709] text-gray-200 z-50 flex flex-col font-sans select-none overflow-hidden animate-fadeIn">
-      
+
       {/* Background Gradients */}
       <div className="absolute top-1/4 left-1/3 w-[600px] h-[600px] bg-purple-900/5 rounded-full filter blur-[150px] pointer-events-none -z-10" />
       <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-violet-950/5 rounded-full filter blur-[120px] pointer-events-none -z-10" />
@@ -338,7 +368,7 @@ export const AIContentEnhancement: React.FC<AIContentEnhancementProps> = ({
       {/* HEADER BAR */}
       <header className="w-full border-b border-white/5 bg-[#0a0a0f]/60 backdrop-blur-md px-6 py-4 flex justify-between items-center shrink-0">
         <div className="flex items-center space-x-3">
-          <button 
+          <button
             onClick={onCancel}
             className="p-2 border border-white/5 hover:border-white/10 hover:bg-white/5 rounded-xl transition text-gray-400 hover:text-white"
           >
@@ -374,10 +404,10 @@ export const AIContentEnhancement: React.FC<AIContentEnhancementProps> = ({
 
       {/* SPLIT PANEL LAYOUT */}
       <div className="flex-grow flex overflow-hidden">
-        
+
         {/* LEFT PANEL: Original & Improvements View */}
         <div className="w-full lg:w-3/5 h-full overflow-y-auto p-6 space-y-8 scrollbar-thin">
-          
+
           {/* SECTION 6: AI REWRITE STYLES preset block */}
           <div className="glass-panel border-purple-500/20 bg-purple-950/5 p-6 rounded-2xl relative overflow-hidden">
             <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
@@ -405,11 +435,10 @@ export const AIContentEnhancement: React.FC<AIContentEnhancementProps> = ({
                   <button
                     key={styleKey}
                     onClick={() => handleRewriteAll(styleKey as any)}
-                    className={`py-2 px-1 text-center font-semibold rounded-lg text-[10px] border transition ${
-                      data.personalityTone === styleKey
+                    className={`py-2 px-1 text-center font-semibold rounded-lg text-[10px] border transition ${data.personalityTone === styleKey
                         ? 'bg-purple-950/20 border-purple-500/50 text-purple-400'
                         : 'bg-black/20 border-white/5 text-gray-400 hover:text-white hover:bg-white/5'
-                    }`}
+                      }`}
                   >
                     {styleKey}
                   </button>
@@ -444,32 +473,45 @@ export const AIContentEnhancement: React.FC<AIContentEnhancementProps> = ({
                   {aboutAccepted && <span className="text-[9px] text-green-400 font-mono bg-green-950/30 px-2 py-0.5 rounded-full">Accepted</span>}
                 </span>
 
-                <>
-                  <h4 className="text-xs font-bold text-white">"{data.basics.tagline}"</h4>
+                 <>
+                  <h4 className="text-xs font-bold text-white">
+                    "{(() => {
+                      const tagRaw = data.basics.tagline as any;
+                      return tagRaw && typeof tagRaw === 'object' 
+                        ? `${tagRaw.heading} - ${tagRaw.explanation}` 
+                        : tagRaw;
+                    })()}"
+                  </h4>
                   <p className="text-xs text-gray-300 leading-relaxed">{data.basics.bio}</p>
-                  
+
                   <div className="flex justify-end space-x-2 pt-2 border-t border-white/5 mt-2">
                     <button
                       onClick={() => setAboutAccepted(!aboutAccepted)}
-                      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center space-x-1 ${
-                        aboutAccepted 
-                          ? 'bg-green-950/20 border border-green-500/20 text-green-400' 
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center space-x-1 ${aboutAccepted
+                          ? 'bg-green-950/20 border border-green-500/20 text-green-400'
                           : 'bg-purple-650 hover:bg-purple-700 text-white'
-                      }`}
+                        }`}
                     >
                       <Check className="h-3 w-3" />
                       <span>{aboutAccepted ? 'Accepted' : 'Accept suggestion'}</span>
                     </button>
                     <button
                       onClick={() => {
+                        const tagRaw = data.basics.tagline as any;
                         setPopupModal({
                           type: 'about',
                           title: 'Edit Profile Summary',
                           fields: [
                             {
-                              key: 'tagline',
-                              label: 'Profile Tagline',
-                              value: data.basics.tagline,
+                              key: 'taglineHeading',
+                              label: 'Profile Tagline Heading',
+                              value: tagRaw && typeof tagRaw === 'object' ? tagRaw.heading : data.basics.professionalTitle || '',
+                              type: 'text'
+                            },
+                            {
+                              key: 'taglineExplanation',
+                              label: 'Profile Tagline Explanation',
+                              value: tagRaw && typeof tagRaw === 'object' ? tagRaw.explanation : typeof tagRaw === 'string' ? tagRaw : '',
                               type: 'text'
                             },
                             {
@@ -537,7 +579,7 @@ export const AIContentEnhancement: React.FC<AIContentEnhancementProps> = ({
                               </p>
                             </div>
 
-                             <div className="flex justify-end space-x-2 pt-2 border-t border-white/5 mt-2.5">
+                            <div className="flex justify-end space-x-2 pt-2 border-t border-white/5 mt-2.5">
                               <button
                                 onClick={() => {
                                   setExperienceAcceptance(prev => ({
@@ -545,11 +587,10 @@ export const AIContentEnhancement: React.FC<AIContentEnhancementProps> = ({
                                     [itemKey]: !prev[itemKey]
                                   }));
                                 }}
-                                className={`px-2.5 py-1 rounded text-[9px] font-bold transition flex items-center space-x-1 ${
-                                  isAccepted 
-                                    ? 'bg-green-950/20 border border-green-500/20 text-green-400' 
+                                className={`px-2.5 py-1 rounded text-[9px] font-bold transition flex items-center space-x-1 ${isAccepted
+                                    ? 'bg-green-950/20 border border-green-500/20 text-green-400'
                                     : 'bg-purple-650 hover:bg-purple-700 text-white'
-                                }`}
+                                  }`}
                               >
                                 <Check className="h-2.5 w-2.5" />
                                 <span>{isAccepted ? 'Accepted' : 'Accept bullet'}</span>
@@ -637,11 +678,10 @@ export const AIContentEnhancement: React.FC<AIContentEnhancementProps> = ({
                                 [pIdx]: !prev[pIdx]
                               }));
                             }}
-                            className={`px-2.5 py-1 rounded text-[9px] font-bold transition flex items-center space-x-1 ${
-                              isAccepted 
-                                ? 'bg-green-950/20 border border-green-500/20 text-green-400' 
+                            className={`px-2.5 py-1 rounded text-[9px] font-bold transition flex items-center space-x-1 ${isAccepted
+                                ? 'bg-green-950/20 border border-green-500/20 text-green-400'
                                 : 'bg-purple-650 hover:bg-purple-700 text-white'
-                            }`}
+                              }`}
                           >
                             <Check className="h-2.5 w-2.5" />
                             <span>{isAccepted ? 'Accepted' : 'Accept changes'}</span>
@@ -674,7 +714,7 @@ export const AIContentEnhancement: React.FC<AIContentEnhancementProps> = ({
                     {/* AI Sub narratives (Problem Statement, Key Features, Tech Highlights, Tagline) */}
                     <div className="bg-[#0b0b0d] border border-white/5 rounded-xl p-4 space-y-4">
                       <span className="text-[9px] font-bold uppercase tracking-wider text-purple-400 block border-b border-white/5 pb-1">AI Generated Bento Meta Details</span>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                         <div className="space-y-1">
                           <div className="flex justify-between items-center mb-1">
@@ -843,13 +883,12 @@ export const AIContentEnhancement: React.FC<AIContentEnhancementProps> = ({
                 <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider block mb-2.5">AI Detected Project Skill Recommendations</span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {suggestedSkills.map((sk, idx) => (
-                    <div 
+                    <div
                       key={sk.name}
-                      className={`p-3 rounded-xl border flex items-center justify-between transition ${
-                        sk.added 
-                          ? 'bg-green-950/15 border-green-500/25 opacity-70' 
+                      className={`p-3 rounded-xl border flex items-center justify-between transition ${sk.added
+                          ? 'bg-green-950/15 border-green-500/25 opacity-70'
                           : 'bg-black/30 border-white/5'
-                      }`}
+                        }`}
                     >
                       <div>
                         <h6 className="text-[11px] font-bold text-white">{sk.name}</h6>
@@ -888,13 +927,12 @@ export const AIContentEnhancement: React.FC<AIContentEnhancementProps> = ({
 
             <div className="space-y-4">
               {missingInfo.map((info, idx) => (
-                <div 
+                <div
                   key={info.key}
-                  className={`p-4 rounded-xl border space-y-2.5 transition ${
-                    info.added 
-                      ? 'bg-green-950/10 border-green-500/20' 
+                  className={`p-4 rounded-xl border space-y-2.5 transition ${info.added
+                      ? 'bg-green-950/10 border-green-500/20'
                       : 'bg-black/35 border-white/5'
-                  }`}
+                    }`}
                 >
                   <div className="flex justify-between items-start">
                     <div>
@@ -938,29 +976,29 @@ export const AIContentEnhancement: React.FC<AIContentEnhancementProps> = ({
 
         {/* RIGHT PANEL: Circular Score & AI Breakdown / Explanations */}
         <div className="hidden lg:block w-2/5 h-full border-l border-white/5 bg-black/40 p-6 flex flex-col justify-between overflow-y-auto scrollbar-thin">
-          
+
           {/* SECTION 8: RESUME SCORE CIRCLE & breakdown */}
           <div className="glass-panel border-white/5 bg-[#121215]/60 p-6 rounded-2xl flex flex-col items-center text-center space-y-5">
             <h3 className="text-xs font-bold text-purple-400 uppercase tracking-widest font-mono">Overall Resume Score</h3>
-            
+
             {/* Animated Gauge */}
             <div className="relative w-36 h-36 flex items-center justify-center">
               <svg className="w-full h-full transform -rotate-90">
-                <circle 
-                  cx="72" 
-                  cy="72" 
-                  r="62" 
-                  className="stroke-gray-800" 
-                  strokeWidth="8" 
-                  fill="transparent" 
+                <circle
+                  cx="72"
+                  cy="72"
+                  r="62"
+                  className="stroke-gray-800"
+                  strokeWidth="8"
+                  fill="transparent"
                 />
-                <motion.circle 
-                  cx="72" 
-                  cy="72" 
-                  r="62" 
-                  className="stroke-purple-600" 
-                  strokeWidth="8" 
-                  fill="transparent" 
+                <motion.circle
+                  cx="72"
+                  cy="72"
+                  r="62"
+                  className="stroke-purple-600"
+                  strokeWidth="8"
+                  fill="transparent"
                   strokeDasharray={2 * Math.PI * 62}
                   initial={{ strokeDashoffset: 2 * Math.PI * 62 }}
                   animate={{ strokeDashoffset: 2 * Math.PI * 62 * (1 - score / 100) }}
@@ -1043,7 +1081,7 @@ export const AIContentEnhancement: React.FC<AIContentEnhancementProps> = ({
               <Info className="h-3.5 w-3.5" />
               <span>AI Modification Reasoning</span>
             </h4>
-            
+
             <div className="space-y-3.5 text-xs">
               <div className="border-l-2 border-purple-500/40 pl-3 space-y-0.5">
                 <h5 className="font-bold text-white">Active Verb Polish</h5>
@@ -1101,7 +1139,7 @@ export const AIContentEnhancement: React.FC<AIContentEnhancementProps> = ({
       {/* REWRITING PROGRESS ANIMATION SHIELD */}
       <AnimatePresence>
         {rewritingStyle && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -1186,11 +1224,16 @@ export const AIContentEnhancement: React.FC<AIContentEnhancementProps> = ({
                   onClick={() => {
                     const type = popupModal.type;
                     if (type === 'about') {
-                      const tagline = popupModal.fields.find(f => f.key === 'tagline')?.value || '';
+                      const taglineHeading = popupModal.fields.find(f => f.key === 'taglineHeading')?.value || '';
+                      const taglineExplanation = popupModal.fields.find(f => f.key === 'taglineExplanation')?.value || '';
                       const bio = popupModal.fields.find(f => f.key === 'bio')?.value || '';
                       setData(prev => ({
                         ...prev,
-                        basics: { ...prev.basics, tagline, bio }
+                        basics: {
+                          ...prev.basics,
+                          tagline: { heading: taglineHeading, explanation: taglineExplanation },
+                          bio
+                        }
                       }));
                       setAboutAccepted(true);
                     } else if (type === 'experience') {

@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Upload, Sparkles, ArrowRight } from 'lucide-react';
 import { Auth } from './Auth.js';
 import { AIGenerationProgress } from './AIGenerationProgress.js';
 import { AIPortfolioReview } from './AIPortfolioReview.js';
 import { AIPortfolioPersonalize } from './AIPortfolioPersonalize.js';
 import { AIContentEnhancement } from './AIContentEnhancement.js';
+import { calculatePortfolioMetrics } from '../utils/scoring.js';
 
 const Github = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -39,6 +40,36 @@ export const Landing: React.FC<LandingProps> = ({ token, onAuthSuccess, onGenera
   const [generationError, setGenerationError] = useState('');
   const [reviewData, setReviewData] = useState<any>(null);
   const [reviewSlug, setReviewSlug] = useState('');
+
+  // Shared Scoring States
+  const [readinessScore, setReadinessScore] = useState(92);
+  const [categoriesScore, setCategoriesScore] = useState({
+    content: 96,
+    projects: 94,
+    design: 91,
+    recruiter: 90,
+    seo: 84,
+    visual: 89
+  });
+  const [resumeScore, setResumeScore] = useState(78);
+  const [enhancementBreakdown, setEnhancementBreakdown] = useState({
+    writing: 74,
+    techDepth: 82,
+    recruiterAppeal: 76,
+    readiness: 80,
+    ats: 70,
+    storytelling: 88
+  });
+
+  useEffect(() => {
+    if (reviewData) {
+      const metrics = calculatePortfolioMetrics(reviewData);
+      setReadinessScore(metrics.score);
+      setCategoriesScore(metrics.reviewBreakdown);
+      setResumeScore(metrics.score);
+      setEnhancementBreakdown(metrics.enhancementBreakdown);
+    }
+  }, [reviewData]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -263,6 +294,11 @@ export const Landing: React.FC<LandingProps> = ({ token, onAuthSuccess, onGenera
           <AIPortfolioReview
             initialData={reviewData}
             slug={reviewSlug}
+            token={token}
+            readinessScore={readinessScore}
+            setReadinessScore={setReadinessScore}
+            categoriesScore={categoriesScore}
+            setCategoriesScore={setCategoriesScore}
             onNext={(data) => {
               setReviewData(data);
               setStep('enhancement');
@@ -279,6 +315,10 @@ export const Landing: React.FC<LandingProps> = ({ token, onAuthSuccess, onGenera
             initialData={reviewData}
             slug={reviewSlug}
             token={token}
+            score={resumeScore}
+            setScore={setResumeScore}
+            breakdown={enhancementBreakdown}
+            setBreakdown={setEnhancementBreakdown}
             onNext={(data) => {
               setReviewData(data);
               setStep('personalize');

@@ -5,6 +5,7 @@ import { PdfExtractorService } from '../services/pdfExtractor.js';
 import { GroqService } from '../services/groq.js';
 import { GithubService } from '../services/github.js';
 import { PortfolioData } from '../types/index.js';
+import LRU from 'lru-cache';
 
 export class PortfolioController {
   /**
@@ -114,9 +115,9 @@ export class PortfolioController {
       // Invalidate response cache for this slug
       if ((global as any).responseCache) {
         const cache = (global as any).responseCache;
-        Object.keys(cache).forEach((key) => {
+        cache.keys().forEach((key: string) => {
           if (key.startsWith(`${slug}:`)) {
-            delete cache[key];
+            cache.del(key);
           }
         });
       }
@@ -192,9 +193,9 @@ export class PortfolioController {
       // Invalidate response cache for old and new slug
       if ((global as any).responseCache) {
         const cache = (global as any).responseCache;
-        Object.keys(cache).forEach((key) => {
+        cache.keys().forEach((key: string) => {
           if ((oldSlug && key.startsWith(`${oldSlug}:`)) || key.startsWith(`${updated.slug}:`)) {
-            delete cache[key];
+            cache.del(key);
           }
         });
       }
@@ -262,13 +263,17 @@ export class PortfolioController {
 
       const profileJson = JSON.parse(portfolio.profileData) as PortfolioData;
 
-      // Simple in-memory cache to save API quota on exact repeated questions, scoped to portfolio slug
+      // LRU cache to save API quota on exact repeated questions, scoped to portfolio slug
       if (!(global as any).responseCache) {
-        (global as any).responseCache = {};
+        (global as any).responseCache = new LRU({
+          max: 1000, // Capped at 1000 items in memory to prevent OOM memory leaks
+          maxAge: 1000 * 60 * 60 * 2, // TTL of 2 hours
+        });
       }
       const cacheKey = `${slug}:${message.toLowerCase().trim()}`;
-      // Bypass cache if there is conversational history, as answers depend on history context
-      let responseText = history && history.length > 0 ? null : (global as any).responseCache[cacheKey];
+      // Bypass cache if there is actual conversational history with the user, as answers depend on history context
+      const hasUserHistory = history && history.some((m: any) => m.role === 'user');
+      let responseText = hasUserHistory ? null : (global as any).responseCache.get(cacheKey);
 
       if (responseText) {
         console.log(`[Cache Hit] Serving cached response for key: "${cacheKey}"`);
@@ -279,9 +284,9 @@ export class PortfolioController {
           message,
           history || []
         );
-        // Only save to cache if history is empty (one-off query)
-        if (!history || history.length === 0) {
-          (global as any).responseCache[cacheKey] = responseText;
+        // Only save to cache if there is no user history (one-off query / first query)
+        if (!hasUserHistory) {
+          (global as any).responseCache.set(cacheKey, responseText);
         }
       }
 
@@ -361,4 +366,45 @@ export class PortfolioController {
       next(error);
     }
   }
+
+  /**
+   * Dispatches optimization calls to Groq AI.
+   */
+  public static async optimizeAI(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.userId;
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized.' });
+      }
+      const { action, portfolioData, userPrompt } = req.body;
+      if (!action || !portfolioData) {
+        return res.status(400).json({ error: 'Missing action or portfolioData.' });
+      }
+
+      if (action === 'alternate-summaries') {
+        const summaries = await GroqService.generateAlternateSummaries(portfolioData);
+        return res.json({ alternateSummaries: summaries });
+      } else if (action === 'improve-all') {
+        const result = await GroqService.improveAllContent(portfolioData);
+        return res.json(result);
+      } else if (action === 'recruiter-friendly') {
+        const result = await GroqService.optimizeRecruiterFriendly(portfolioData);
+        return res.json(result);
+      } else if (action === 'chat-edit') {
+        if (!userPrompt) {
+          return res.status(400).json({ error: 'Missing userPrompt for chat-edit action.' });
+        }
+        const result = await GroqService.chatEditPortfolioData(portfolioData, userPrompt);
+        if (portfolioData.resumePdfBase64) {
+          result.resumePdfBase64 = portfolioData.resumePdfBase64;
+        }
+        return res.json({ updatedPortfolio: result });
+      } else {
+        return res.status(400).json({ error: 'Invalid AI optimization action.' });
+      }
+    } catch (error) {
+      next(error);
+    }
+  }
 }
+

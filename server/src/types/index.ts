@@ -42,15 +42,32 @@ export interface Socials {
   website?: string;
 }
 
+export interface ReadinessAssessment {
+  score: number;
+  breakdown: {
+    writing: number;
+    techDepth: number;
+    recruiterAppeal: number;
+    readiness: number;
+    ats: number;
+    storytelling: number;
+  };
+  suggestedSkills: { name: string; reason: string }[];
+}
+
 export interface PortfolioData {
   basics: {
     name: string;
     email: string;
     phone?: string;
     location?: string;
-    tagline: string;
+    tagline: {
+      heading: string;
+      explanation: string;
+    };
     bio: string;
     professionalTitle: string;
+    alternateSummaries?: string[];
   };
   skills: SkillCategory[];
   experience: ExperienceItem[];
@@ -59,4 +76,6 @@ export interface PortfolioData {
   achievements: AchievementItem[];
   socials: Socials;
   resumePdfBase64?: string;
+  readinessAssessment?: ReadinessAssessment;
 }
+

@@ -2,6 +2,47 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Bot, User, Sparkles, Trash2, Mic, MicOff, Volume2, AlertCircle } from 'lucide-react';
 
+// Custom Map-based browser-safe LRU Cache implementation (remembers key insertion ordering)
+class SimpleBrowserLRUCache<K, V> {
+  private max: number;
+  private cache: Map<K, V>;
+
+  constructor(max = 50) {
+    this.max = max;
+    this.cache = new Map<K, V>();
+  }
+
+  public get(key: K): V | undefined {
+    const item = this.cache.get(key);
+    if (item !== undefined) {
+      // Refresh key by deleting and re-inserting it at the end
+      this.cache.delete(key);
+      this.cache.set(key, item);
+    }
+    return item;
+  }
+
+  public set(key: K, value: V): void {
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    } else if (this.cache.size >= this.max) {
+      // Evict least recently used (first item in Map iterator)
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey !== undefined) {
+        this.cache.delete(firstKey);
+      }
+    }
+    this.cache.set(key, value);
+  }
+
+  public clear(): void {
+    this.cache.clear();
+  }
+}
+
+// Instantiate client-side cache persistent across renders
+const clientCopilotCache = new SimpleBrowserLRUCache<string, string>(50);
+
 const SUGGESTED_PROMPTS = [
   "Tell me about your background",
   "What projects have you built?",
@@ -244,6 +285,22 @@ const AICopilotSection: React.FC<AICopilotSectionProps> = ({ basics, slug }) => 
     const userMsg = { role: 'user' as const, content: text };
     setMessages(prev => [...prev, userMsg]);
     setInputValue("");
+
+    const isOneOffQuery = messages.filter(m => m.role === 'user').length === 0;
+    const cacheKey = text.toLowerCase().trim();
+
+    if (isOneOffQuery) {
+      const cachedReply = clientCopilotCache.get(cacheKey);
+      if (cachedReply) {
+        console.log(`[Client Cache Hit] Serving local response for key: "${cacheKey}"`);
+        setMessages(prev => [...prev, { role: 'assistant' as const, content: cachedReply }]);
+        if (voiceEnabled) {
+          speakText(cachedReply);
+        }
+        return;
+      }
+    }
+
     setIsLoading(true);
     setVoiceStatus('thinking');
 
@@ -262,6 +319,10 @@ const AICopilotSection: React.FC<AICopilotSectionProps> = ({ basics, slug }) => 
       if (response.ok) {
         setMessages(prev => [...prev, { role: 'assistant' as const, content: data.reply }]);
         setVoiceStatus('idle');
+
+        if (isOneOffQuery) {
+          clientCopilotCache.set(cacheKey, data.reply);
+        }
         
         // Speak response aloud automatically
         if (voiceEnabled) {

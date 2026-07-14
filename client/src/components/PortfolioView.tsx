@@ -37,64 +37,12 @@ const ensureAbsoluteUrl = (url: string | undefined): string => {
 };
 
 const parseTaglineParts = (tagline: string, professionalTitle: string) => {
-  const trimmed = tagline.trim().replace(/\.$/, '');
-  
-  // Define split markers in order of preference
-  const markers = [
-    { key: ' with a focus on ', replacement: 'With a focus on ' },
-    { key: ' specializing in ', replacement: 'Specializing in ' },
-    { key: ' focusing on ', replacement: 'Focusing on ' },
-    { key: ' to ', replacement: 'To ' },
-    { key: ' and ', replacement: 'And ' },
-    { key: ' building ', replacement: 'Building ' },
-    { key: ',', replacement: '' }
-  ];
-
-  for (const marker of markers) {
-    const idx = trimmed.toLowerCase().indexOf(marker.key);
-    if (idx !== -1) {
-      const headingPart = trimmed.slice(0, idx).trim();
-      const explanationPart = trimmed.slice(idx + marker.key.length).trim();
-      
-      const explanationCapitalized = explanationPart.charAt(0).toUpperCase() + explanationPart.slice(1);
-      
-      let finalExplanation = explanationCapitalized;
-      if (marker.replacement && !explanationCapitalized.toLowerCase().startsWith(marker.replacement.toLowerCase())) {
-        finalExplanation = marker.replacement + explanationCapitalized.charAt(0).toLowerCase() + explanationCapitalized.slice(1);
-      }
-
-      const formattedHeading = headingPart.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-      const headingWordCount = formattedHeading.split(/\s+/).length;
-      
-      if (headingWordCount >= 2 && headingWordCount <= 6) {
-        return {
-          heading: formattedHeading,
-          explanation: finalExplanation + '.'
-        };
-      }
-    }
-  }
-
-  // Word-based split fallback
-  const words = trimmed.split(/\s+/);
-  if (words.length >= 5) {
-    const splitIdx = words.length >= 6 ? 4 : 3;
-    const headingPart = words.slice(0, splitIdx).join(' ');
-    const explanationPart = words.slice(splitIdx).join(' ');
-    
-    const formattedHeading = headingPart.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-    const formattedExplanation = explanationPart.charAt(0).toUpperCase() + explanationPart.slice(1) + '.';
-    
-    return {
-      heading: formattedHeading,
-      explanation: formattedExplanation
-    };
-  }
-
-  const formattedHeading = professionalTitle.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  const formattedHeading = professionalTitle 
+    ? professionalTitle.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+    : 'Software Engineer';
   return {
-    heading: formattedHeading || 'Systems Architecture & Design',
-    explanation: trimmed + '.'
+    heading: formattedHeading,
+    explanation: tagline.trim().replace(/\.$/, '') + '.'
   };
 };
 
@@ -269,6 +217,38 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ slug, isPreview = 
         URL.revokeObjectURL(url);
       } catch (err) {
         console.error('Failed to download resume PDF:', err);
+      }
+    }
+  };
+
+  const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const anchor = (e.target as HTMLElement).closest('a');
+    if (anchor) {
+      const href = anchor.getAttribute('href');
+      if (href && href.startsWith('#')) {
+        const targetId = href.substring(1);
+        if (targetId) {
+          e.preventDefault();
+          setIsNavDropdownOpen(false);
+          
+          const targetElement = document.getElementById(targetId);
+          if (targetElement) {
+            if (isPreview) {
+              const container = anchor.closest('.portfolio-view-container')?.parentElement;
+              if (container) {
+                const containerRect = container.getBoundingClientRect();
+                const elementRect = targetElement.getBoundingClientRect();
+                const relativeTop = elementRect.top - containerRect.top + container.scrollTop;
+                container.scrollTo({
+                  top: Math.max(0, relativeTop - 20),
+                  behavior: 'smooth'
+                });
+                return;
+              }
+            }
+            targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }
       }
     }
   };
@@ -606,8 +586,21 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ slug, isPreview = 
 
   const renderTaglineBlock = () => {
     const fallbackTagline = `I engineer algorithmic systems at the intersection of mathematics and code.`;
-    const tagline = basics.tagline || fallbackTagline;
-    const { heading, explanation } = parseTaglineParts(tagline, basics.professionalTitle);
+    const rawTagline = (basics.tagline as any) || fallbackTagline;
+    let heading = '';
+    let explanation = '';
+    
+    if (rawTagline && typeof rawTagline === 'object' && 'heading' in rawTagline) {
+      heading = (rawTagline as any).heading;
+      explanation = (rawTagline as any).explanation;
+    } else if (typeof rawTagline === 'string') {
+      const parsed = parseTaglineParts(rawTagline, basics.professionalTitle);
+      heading = parsed.heading;
+      explanation = parsed.explanation;
+    } else {
+      heading = basics.professionalTitle || 'Software Engineer';
+      explanation = 'Passionate developer building high-performance web applications.';
+    }
     
     return (
       <div className="space-y-3 max-w-xl text-left">
@@ -851,37 +844,114 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ slug, isPreview = 
 
   return (
     <div 
-      className={`min-h-screen bg-background-dark text-gray-100 flex flex-col font-sans select-none relative overflow-hidden pb-24 ${getThemeClass()} ${getAnimationClass()} ${getLayoutClass()}`}
+      onClick={handleContainerClick}
+      className={`portfolio-view-container min-h-screen bg-background-dark text-gray-100 flex flex-col font-sans select-none relative overflow-x-hidden pb-24 ${getThemeClass()} ${getAnimationClass()} ${getLayoutClass()}`}
       style={{ fontFamily: fontFamily }}
     >
       <style>{`
-        :root {
+        .portfolio-view-container {
           --accent-glow: ${accentColor}4D;
           --accent-color-glow: ${accentColor}AA;
         }
 
+        /* MOBILE SANDBOX PREVIEW OVERRIDES */
+        .preview-mobile .portfolio-view-container .grid {
+          grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+        }
+        .preview-mobile .portfolio-view-container [class*="lg:col-span-"],
+        .preview-mobile .portfolio-view-container [class*="md:col-span-"],
+        .preview-mobile .portfolio-view-container [class*="sm:col-span-"] {
+          grid-column: span 1 / span 1 !important;
+        }
+        .preview-mobile .portfolio-view-container [class*="lg:col-start-"],
+        .preview-mobile .portfolio-view-container [class*="md:col-start-"] {
+          grid-column-start: auto !important;
+        }
+        .preview-mobile .portfolio-view-container .flex-row,
+        .preview-mobile .portfolio-view-container .md\:flex-row,
+        .preview-mobile .portfolio-view-container .lg\:flex-row {
+          flex-direction: column !important;
+        }
+        .preview-mobile .portfolio-view-container .lg\:sticky,
+        .preview-mobile .portfolio-view-container .sticky {
+          position: static !important;
+        }
+        .preview-mobile .portfolio-view-container .lg\:border-l,
+        .preview-mobile .portfolio-view-container .lg\:border-t,
+        .preview-mobile .portfolio-view-container .border-l {
+          border-left-width: 0px !important;
+          border-top-width: 0px !important;
+        }
+        .preview-mobile .portfolio-view-container .lg\:pl-8,
+        .preview-mobile .portfolio-view-container .lg\:pl-12,
+        .preview-mobile .portfolio-view-container .pl-6 {
+          padding-left: 0px !important;
+        }
+        .preview-mobile .portfolio-view-container .px-8,
+        .preview-mobile .portfolio-view-container .md\:px-12,
+        .preview-mobile .portfolio-view-container .lg\:px-24 {
+          padding-left: 1rem !important;
+          padding-right: 1rem !important;
+        }
+        .preview-mobile .portfolio-view-container .py-12,
+        .preview-mobile .portfolio-view-container .md\:py-24,
+        .preview-mobile .portfolio-view-container .lg\:py-32 {
+          padding-top: 2rem !important;
+          padding-bottom: 2rem !important;
+        }
+        .preview-mobile .portfolio-view-container .text-4xl,
+        .preview-mobile .portfolio-view-container .text-5xl,
+        .preview-mobile .portfolio-view-container .text-6xl,
+        .preview-mobile .portfolio-view-container .lg\:text-6xl,
+        .preview-mobile .portfolio-view-container .lg\:text-7xl {
+          font-size: 1.875rem !important; /* text-3xl */
+          line-height: 2.25rem !important;
+        }
+        .preview-mobile .portfolio-view-container .text-3xl {
+          font-size: 1.5rem !important; /* text-2xl */
+          line-height: 2rem !important;
+        }
+
         /* CUSTOM ACCENT overrides */
-        .text-purple-400, .text-purple-500, .text-purple-350, .text-purple-300, .text-purple-600, .text-purple-700 {
+        .portfolio-view-container .text-purple-400, 
+        .portfolio-view-container .text-purple-500, 
+        .portfolio-view-container .text-purple-350, 
+        .portfolio-view-container .text-purple-300, 
+        .portfolio-view-container .text-purple-600, 
+        .portfolio-view-container .text-purple-700 {
           color: ${accentColor} !important;
         }
-        .bg-purple-650, .bg-purple-600, .bg-purple-500, .bg-purple-700, .bg-purple-400 {
+        .portfolio-view-container .bg-purple-650, 
+        .portfolio-view-container .bg-purple-600, 
+        .portfolio-view-container .bg-purple-500, 
+        .portfolio-view-container .bg-purple-700, 
+        .portfolio-view-container .bg-purple-400 {
           background-color: ${accentColor} !important;
         }
-        .hover\\:bg-purple-700:hover, .hover\\:bg-purple-600:hover {
+        .portfolio-view-container .hover\\:bg-purple-700:hover, 
+        .portfolio-view-container .hover\\:bg-purple-600:hover {
           background-color: ${accentColor}cc !important;
         }
-        .border-purple-500, .border-purple-500\\/10, .border-purple-500\\/20, .border-purple-500\\/30, .border-purple-950\\/40, .border-purple-900\\/30, .border-purple-805\\/30, .border-purple-800\\/30 {
+        .portfolio-view-container .border-purple-500, 
+        .portfolio-view-container .border-purple-500\\/10, 
+        .portfolio-view-container .border-purple-500\\/20, 
+        .portfolio-view-container .border-purple-500\\/30, 
+        .portfolio-view-container .border-purple-950\\/40, 
+        .portfolio-view-container .border-purple-900\\/30, 
+        .portfolio-view-container .border-purple-805\\/30, 
+        .portfolio-view-container .border-purple-800\\/30 {
           border-color: ${accentColor}55 !important;
         }
-        .bg-purple-950\\/20, .bg-purple-950\\/40 {
+        .portfolio-view-container .bg-purple-950\\/20, 
+        .portfolio-view-container .bg-purple-950\\/40 {
           background-color: ${accentColor}15 !important;
         }
-        .text-gradient {
+        .portfolio-view-container .text-gradient {
           background: linear-gradient(135deg, ${accentColor}, #ffffff);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
         }
-        .focus\\:border-purple-500:focus {
+        .portfolio-view-container .focus\\:border-purple-500:focus {
           border-color: ${accentColor} !important;
         }
         
@@ -1385,10 +1455,14 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ slug, isPreview = 
       <div className="max-w-6xl w-full mx-auto px-4 py-4 space-y-8 flex-grow">
         
         {/* Sticky Premium Header Navbar */}
-        <nav className="sticky top-4 z-40 bg-zinc-950/60 backdrop-blur-md border border-white/5 shadow-lg flex items-center justify-between w-full rounded-2xl px-6 py-3.5 md:flex md:w-full md:justify-between md:rounded-2xl md:px-6 md:py-3.5 max-md:w-fit max-md:mx-auto max-md:rounded-full max-md:px-4 max-md:py-2.5 max-md:gap-4 max-md:justify-center relative">
+        <nav className={`sticky top-4 z-40 bg-zinc-950/60 backdrop-blur-md border border-white/5 shadow-lg flex items-center justify-between relative ${
+          isPreview 
+            ? 'w-fit mx-auto rounded-full px-4 py-2.5 gap-4 justify-center' 
+            : 'w-full rounded-2xl px-6 py-3.5 md:flex md:w-full md:justify-between md:rounded-2xl md:px-6 md:py-3.5 max-md:w-fit max-md:mx-auto max-md:rounded-full max-md:px-4 max-md:py-2.5 max-md:gap-4 max-md:justify-center'
+        }`}>
           
           {/* Desktop Left: Home & Theme toggle */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className={`${isPreview ? 'hidden' : 'hidden md:flex'} items-center gap-4`}>
             <a href="#hero" className="text-gray-450 hover:text-white transition" title="Home">
               <Home className="h-4.5 w-4.5" />
             </a>
@@ -1398,7 +1472,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ slug, isPreview = 
           </div>
 
           {/* Desktop Center: Navigation links */}
-          <div className="hidden md:flex items-center gap-5 text-xs font-semibold text-gray-400">
+          <div className={`${isPreview ? 'hidden' : 'hidden md:flex'} items-center gap-5 text-xs font-semibold text-gray-400`}>
             <a href="#about" className="hover:text-white transition uppercase tracking-wider text-[10px]">About</a>
             <a href="#projects" className="hover:text-white transition uppercase tracking-wider text-[10px]">Projects</a>
             <a href="#experience" className="hover:text-white transition uppercase tracking-wider text-[10px]">Experience</a>
@@ -1413,12 +1487,12 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({ slug, isPreview = 
           </div>
 
           {/* Desktop Right: Live Clock */}
-          <div className="hidden md:block text-xs font-mono font-bold text-purple-400 select-none">
+          <div className={`${isPreview ? 'hidden' : 'hidden md:block'} text-xs font-mono font-bold text-purple-400 select-none`}>
             {currentTime}
           </div>
 
           {/* Mobile Centered Capsule Layout */}
-          <div className="flex md:hidden items-center gap-3">
+          <div className={`${isPreview ? 'flex' : 'flex md:hidden'} items-center gap-3`}>
             <a href="#hero" className="text-gray-450 hover:text-white transition p-1" title="Home">
               <Home className="h-4.5 w-4.5" />
             </a>

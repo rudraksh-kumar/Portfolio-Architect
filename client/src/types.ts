@@ -71,9 +71,13 @@ export interface PortfolioData {
     email: string;
     phone?: string;
     location?: string;
-    tagline: string;
+    tagline: {
+      heading: string;
+      explanation: string;
+    };
     bio: string;
     professionalTitle: string;
+    alternateSummaries?: string[];
   };
   skills: SkillCategory[];
   experience: ExperienceItem[];
@@ -102,4 +106,19 @@ export interface PortfolioData {
     ogImage: string;
   };
   resumePdfBase64?: string;
+  readinessAssessment?: ReadinessAssessment;
 }
+
+export interface ReadinessAssessment {
+  score: number;
+  breakdown: {
+    writing: number;
+    techDepth: number;
+    recruiterAppeal: number;
+    readiness: number;
+    ats: number;
+    storytelling: number;
+  };
+  suggestedSkills: { name: string; reason: string }[];
+}
+

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, LineChart, MessageSquare, Globe, Edit2, Save, LogOut, CheckCircle, RefreshCw, Upload, Sparkles, Palette, Menu } from 'lucide-react';
+import { Layout, LineChart, MessageSquare, Globe, Edit2, Save, LogOut, CheckCircle, RefreshCw, Upload, Sparkles, Palette, Menu, Copy, ExternalLink, Check } from 'lucide-react';
 import type { PortfolioData } from '../types.js';
 import { AIGenerationProgress } from './AIGenerationProgress.js';
 import { AIPortfolioReview } from './AIPortfolioReview.js';
 import { AIPortfolioPersonalize } from './AIPortfolioPersonalize.js';
 import { AIContentEnhancement } from './AIContentEnhancement.js';
 import { AIChatPortfolioEditor } from './AIChatPortfolioEditor.js';
+import { calculatePortfolioMetrics } from '../utils/scoring.js';
 
 interface DashboardProps {
   token: string;
@@ -39,6 +40,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ token, onLogout, onViewPor
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [copied, setCopied] = useState(false);
 
   // Setup / No-Portfolio States
   const [hasPortfolio, setHasPortfolio] = useState(true);
@@ -50,6 +52,36 @@ export const Dashboard: React.FC<DashboardProps> = ({ token, onLogout, onViewPor
   const [reviewSlug, setReviewSlug] = useState('');
   const [designWorkflowStep, setDesignWorkflowStep] = useState<'review' | 'enhance' | 'personalize' | null>(null);
   const [workflowSource, setWorkflowSource] = useState<'onboarding' | 'settings' | null>(null);
+
+  // Shared Scoring States
+  const [readinessScore, setReadinessScore] = useState(92);
+  const [categoriesScore, setCategoriesScore] = useState({
+    content: 96,
+    projects: 94,
+    design: 91,
+    recruiter: 90,
+    seo: 84,
+    visual: 89
+  });
+  const [resumeScore, setResumeScore] = useState(78);
+  const [enhancementBreakdown, setEnhancementBreakdown] = useState({
+    writing: 74,
+    techDepth: 82,
+    recruiterAppeal: 76,
+    readiness: 80,
+    ats: 70,
+    storytelling: 88
+  });
+
+  useEffect(() => {
+    if (reviewData) {
+      const metrics = calculatePortfolioMetrics(reviewData);
+      setReadinessScore(metrics.score);
+      setCategoriesScore(metrics.reviewBreakdown);
+      setResumeScore(metrics.score);
+      setEnhancementBreakdown(metrics.enhancementBreakdown);
+    }
+  }, [reviewData]);
 
   // Dashboard Data
   const [slug, setSlug] = useState('');
@@ -471,11 +503,34 @@ export const Dashboard: React.FC<DashboardProps> = ({ token, onLogout, onViewPor
                     <div className="p-3 bg-green-900/30 text-green-400 rounded-xl">
                       <Layout className="h-6 w-6" />
                     </div>
-                    <div>
+                    <div className="flex-grow min-w-0">
                       <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Active Brand URL</p>
-                      <p className="text-sm font-semibold truncate mt-2 text-purple-400 hover:underline cursor-pointer" onClick={() => slug && onViewPortfolio(slug)}>
-                        /p/{slug || 'unset'}
-                      </p>
+                      {slug ? (
+                        <div className="flex items-center justify-between gap-2 mt-2">
+                          <a
+                            href={`${window.location.origin}/p/${slug}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-sm font-semibold truncate text-purple-400 hover:underline flex items-center gap-1.5 min-w-0"
+                          >
+                            /p/{slug}
+                            <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                          </a>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(`${window.location.origin}/p/${slug}`);
+                              setCopied(true);
+                              setTimeout(() => setCopied(false), 2000);
+                            }}
+                            className="p-1.5 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition shrink-0"
+                            title="Copy Link to Clipboard"
+                          >
+                            {copied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="text-sm font-semibold text-gray-500 mt-2">unset</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -608,7 +663,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ token, onLogout, onViewPor
                         className="flex-grow px-4 py-3 bg-transparent text-white placeholder-gray-500 focus:outline-none text-sm font-mono"
                       />
                     </div>
-                    <span className="text-xs text-gray-500">Only alphanumeric characters and hyphens allowed.</span>
+                    <span className="text-xs text-gray-500 block">Only alphanumeric characters and hyphens allowed.</span>
+                    {slug && (
+                      <div className="text-xs text-gray-400 mt-1 flex items-center gap-1.5">
+                        <span>Live link preview:</span>
+                        <a
+                          href={`${window.location.origin}/p/${slug}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-purple-400 hover:underline font-mono flex items-center gap-1"
+                        >
+                          {window.location.origin}/p/{slug}
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      </div>
+                    )}
                   </div>
 
                   {/* theme selection */}
@@ -797,6 +866,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ token, onLogout, onViewPor
         <AIPortfolioReview
           initialData={reviewData}
           slug={reviewSlug}
+          token={token}
+          readinessScore={readinessScore}
+          setReadinessScore={setReadinessScore}
+          categoriesScore={categoriesScore}
+          setCategoriesScore={setCategoriesScore}
           onNext={(data) => {
             setReviewData(data);
             setDesignWorkflowStep('enhance');
@@ -813,6 +887,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ token, onLogout, onViewPor
           initialData={reviewData}
           slug={reviewSlug}
           token={token}
+          score={resumeScore}
+          setScore={setResumeScore}
+          breakdown={enhancementBreakdown}
+          setBreakdown={setEnhancementBreakdown}
           onNext={(data) => {
             setReviewData(data);
             setDesignWorkflowStep('personalize');
@@ -850,7 +928,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ token, onLogout, onViewPor
           }}
         />
       )}
-
       {isChatEditorOpen && (
         <AIChatPortfolioEditor
           initialData={(() => {
@@ -862,6 +939,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ token, onLogout, onViewPor
             }
           })()}
           slug={slug}
+          token={token}
           onSave={async (newData) => {
             try {
               const response = await fetch('/api/portfolio/me', {

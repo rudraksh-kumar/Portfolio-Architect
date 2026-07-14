@@ -15,13 +15,13 @@ import {
   Copy, 
   Upload, 
   CheckCircle2, 
+  AlertCircle,
   Briefcase, 
   GraduationCap, 
   Trophy, 
   Code2, 
   FolderGit2, 
   Info,
-  Maximize2,
   FileText,
   User
 } from 'lucide-react';
@@ -30,19 +30,80 @@ import type { PortfolioData } from '../types.js';
 interface AIPortfolioReviewProps {
   initialData: PortfolioData;
   slug: string;
+  token: string;
+  readinessScore: number;
+  setReadinessScore: React.Dispatch<React.SetStateAction<number>>;
+  categoriesScore: {
+    content: number;
+    projects: number;
+    design: number;
+    recruiter: number;
+    seo: number;
+    visual: number;
+  };
+  setCategoriesScore: React.Dispatch<React.SetStateAction<{
+    content: number;
+    projects: number;
+    design: number;
+    recruiter: number;
+    seo: number;
+    visual: number;
+  }>>;
   onNext: (updatedData: PortfolioData) => void;
   onCancel: () => void;
 }
 
 export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
   initialData,
-  slug,
+  token,
+  readinessScore,
+  setReadinessScore,
+  categoriesScore,
+  setCategoriesScore,
   onNext,
   onCancel
 }) => {
   // Main state holding the parsed portfolio details
   const [portfolioData, setPortfolioData] = useState<PortfolioData>(initialData);
-  const [themeSlug, setThemeSlug] = useState(slug);
+  const [loadingAI, setLoadingAI] = useState(false);
+  const [aiMessage, setAiMessage] = useState('');
+  const [currentSummaryIndex, setCurrentSummaryIndex] = useState(0);
+
+  React.useEffect(() => {
+    const checkAndFetchSummaries = async () => {
+      if (portfolioData.basics.alternateSummaries && portfolioData.basics.alternateSummaries.length > 0) {
+        return;
+      }
+      try {
+        const response = await fetch('/api/portfolio/ai/optimize', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            action: 'alternate-summaries',
+            portfolioData
+          })
+        });
+        if (response.ok) {
+          const result = await response.json();
+          if (result.alternateSummaries && result.alternateSummaries.length > 0) {
+            setPortfolioData(prev => ({
+              ...prev,
+              basics: {
+                ...prev.basics,
+                alternateSummaries: result.alternateSummaries
+              }
+            }));
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching alternate summaries:', err);
+      }
+    };
+    checkAndFetchSummaries();
+  }, [token]);
 
   // Expand/collapse states for sections
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -60,23 +121,43 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
   // Edit Modals / Inline Edit helpers
   const [activeEditSection, setActiveEditSection] = useState<string | null>(null);
   
+  // Custom dialog popup states
+  const [customPrompt, setCustomPrompt] = useState<{
+    isOpen: boolean;
+    title: string;
+    description?: string;
+    fields: { key: string; label: string; defaultValue: string; type?: 'text' | 'textarea' }[];
+    onSubmit: (values: Record<string, string>) => void;
+  } | null>(null);
+  
   // Section-specific temporary states for modals
   const [tempBio, setTempBio] = useState(portfolioData.basics.bio);
-  const [tempTagline, setTempTagline] = useState(portfolioData.basics.tagline);
+  const taglineRaw = portfolioData.basics.tagline as any;
+  const [tempTaglineHeading, setTempTaglineHeading] = useState(
+    taglineRaw && typeof taglineRaw === 'object'
+      ? taglineRaw.heading
+      : portfolioData.basics.professionalTitle || ''
+  );
+  const [tempTaglineExplanation, setTempTaglineExplanation] = useState(
+    taglineRaw && typeof taglineRaw === 'object'
+      ? taglineRaw.explanation
+      : typeof taglineRaw === 'string'
+      ? taglineRaw
+      : ''
+  );
   const [tempTitle, setTempTitle] = useState(portfolioData.basics.professionalTitle);
   const [tempName, setTempName] = useState(portfolioData.basics.name);
   const [tempLocation, setTempLocation] = useState(portfolioData.basics.location || '');
 
-  // Live Score Readiness States
-  const [readinessScore, setReadinessScore] = useState(92);
-  const [categoriesScore, setCategoriesScore] = useState({
-    content: 96,
-    projects: 94,
-    design: 91,
-    recruiter: 90,
-    seo: 84,
-    visual: 89
-  });
+
+
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const triggerToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast(null);
+    }, 4000);
+  };
 
   // Dynamic Suggestion lists
   const [suggestions, setSuggestions] = useState([
@@ -89,77 +170,165 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
+  // Filter experience to only include items that do not look like projects
+  const experienceItems = portfolioData.experience.filter(exp => {
+    const company = exp.company.toLowerCase();
+    const role = exp.role.toLowerCase();
+    const isProjectLike = company.includes('project') || role.includes('project');
+    
+    const matchesProjectName = portfolioData.projects.some(proj => 
+      proj.name.toLowerCase().includes(company) || 
+      company.includes(proj.name.toLowerCase())
+    );
+    
+    return !isProjectLike && !matchesProjectName;
+  });
+
   // --- ACTIONS ---
 
   const handleCopySummary = () => {
     navigator.clipboard.writeText(portfolioData.basics.bio);
-    alert('Summary copied to clipboard!');
+    triggerToast('Summary copied to clipboard!', 'success');
   };
 
-  // Section 1: Regenerate Summary (mocked AI action)
-  const handleRegenerateSummary = () => {
-    const alternateSummaries = [
-      "Dynamic Full Stack Engineer and AI Developer with a track record of building glassmorphic React frontends and scalable Node.js services. Competent problem solver specialized in competitive programming.",
-      "Results-oriented Software Developer focused on frontend engineering and machine learning integrations. Experienced in optimizing Webpack, bundling bundles, and deploying RAG pipelines.",
-      "Full Stack AI Developer merging backend architecture with cutting-edge LLMs. Expert in creating fluid bento-grid portfolios and designing recruiter-ready developer portfolios."
-    ];
-    const rand = alternateSummaries[Math.floor(Math.random() * alternateSummaries.length)];
+  // Section 1: Regenerate Summary (uses cached AI summaries)
+  const handleRegenerateSummary = async () => {
+    let alternates = portfolioData.basics.alternateSummaries || [];
+    
+    if (alternates.length === 0) {
+      setLoadingAI(true);
+      setAiMessage('Generating alternate professional summaries...');
+      try {
+        const response = await fetch('/api/portfolio/ai/optimize', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            action: 'alternate-summaries',
+            portfolioData
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('AI Service failed to generate summaries.');
+        }
+
+        const result = await response.json();
+        if (result.alternateSummaries && result.alternateSummaries.length > 0) {
+          alternates = result.alternateSummaries;
+          setPortfolioData(prev => ({
+            ...prev,
+            basics: {
+              ...prev.basics,
+              alternateSummaries: result.alternateSummaries
+            }
+          }));
+        } else {
+          throw new Error('No summaries generated.');
+        }
+      } catch (err: any) {
+        console.error(err);
+        triggerToast(err.message || 'Failed to generate alternate summaries.', 'error');
+        return;
+      } finally {
+        setLoadingAI(false);
+        setAiMessage('');
+      }
+    }
+
+    const nextIdx = (currentSummaryIndex + 1) % alternates.length;
+    setCurrentSummaryIndex(nextIdx);
+    const selectedSummary = alternates[nextIdx];
+
     setPortfolioData(prev => ({
       ...prev,
-      basics: { ...prev.basics, bio: rand }
+      basics: { ...prev.basics, bio: selectedSummary }
     }));
-    // Boost visual/content score
+    // Boost visual/content score slightly
     setCategoriesScore(prev => ({ ...prev, content: Math.min(prev.content + 1, 100) }));
   };
 
   // Section 9: AI Auto-Improvement Actions
-  const handleImproveAll = () => {
-    // Perform simulated overall polish
-    setPortfolioData(prev => ({
-      ...prev,
-      basics: {
-        ...prev.basics,
-        bio: prev.basics.bio + " Focused on building highly-performant, low-latency, and accessible systems for modern enterprises.",
-        tagline: "Building high-performance AI integrations and developer experiences."
-      }
-    }));
-    setReadinessScore(98);
-    setCategoriesScore({
-      content: 99,
-      projects: 98,
-      design: 97,
-      recruiter: 99,
-      seo: 95,
-      visual: 96
-    });
-    alert('AI polished all sections successfully!');
-  };
-
-  const handleRecruiterFriendly = () => {
-    setPortfolioData(prev => ({
-      ...prev,
-      basics: {
-        ...prev.basics,
-        bio: "Specialized Software Engineer offering expertise in building enterprise-grade frontends, full-stack React applications, and deploying low-latency Node.js architectures. Proven ability to translate business requirements into clean, structured code."
-      }
-    }));
-    setCategoriesScore(prev => ({ ...prev, recruiter: 98 }));
-  };
-
-  const handleExpandAbbreviations = () => {
-    setPortfolioData(prev => {
-      const updatedSkills = prev.skills.map(cat => {
-        if (cat.category.toLowerCase() === 'ai') {
-          return {
-            ...cat,
-            items: cat.items.map(s => s === 'RAG' ? 'Retrieval-Augmented Generation (RAG)' : s)
-          };
-        }
-        return cat;
+  const handleImproveAll = async () => {
+    setLoadingAI(true);
+    setAiMessage('Analyzing resume and polishing content...');
+    try {
+      const response = await fetch('/api/portfolio/ai/optimize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          action: 'improve-all',
+          portfolioData
+        })
       });
-      return { ...prev, skills: updatedSkills };
-    });
-    setCategoriesScore(prev => ({ ...prev, seo: 92 }));
+
+      if (!response.ok) {
+        throw new Error('AI Service failed to optimize your portfolio.');
+      }
+
+      const result = await response.json();
+      setPortfolioData(prev => ({
+        ...prev,
+        basics: {
+          ...prev.basics,
+          bio: result.bio,
+          tagline: result.tagline
+        }
+      }));
+      setReadinessScore(result.readinessScore);
+      setCategoriesScore(result.categoriesScore);
+      triggerToast('AI polished all sections successfully!', 'success');
+    } catch (err: any) {
+      console.error(err);
+      triggerToast(err.message || 'Failed to improve content using AI.', 'error');
+    } finally {
+      setLoadingAI(false);
+      setAiMessage('');
+    }
+  };
+
+  const handleRecruiterFriendly = async () => {
+    setLoadingAI(true);
+    setAiMessage('Crafting recruiter-friendly pitch...');
+    try {
+      const response = await fetch('/api/portfolio/ai/optimize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          action: 'recruiter-friendly',
+          portfolioData
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('AI Service failed to optimize biography.');
+      }
+
+      const result = await response.json();
+      setPortfolioData(prev => ({
+        ...prev,
+        basics: {
+          ...prev.basics,
+          bio: result.bio
+        }
+      }));
+      setCategoriesScore(prev => ({ ...prev, recruiter: result.recruiterScore }));
+      triggerToast('Biography optimized for recruiters!', 'success');
+    } catch (err: any) {
+      console.error(err);
+      triggerToast(err.message || 'Failed to optimize biography.', 'error');
+    } finally {
+      setLoadingAI(false);
+      setAiMessage('');
+    }
   };
 
 
@@ -171,21 +340,27 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
       return { ...prev, projects: sorted };
     });
     setCategoriesScore(prev => ({ ...prev, projects: 98 }));
-    alert('Projects reordered by complexity!');
+    triggerToast('Projects reordered by complexity!', 'success');
   };
 
   // Section 3: Skills manipulation
   const handleAddSkill = (catIndex: number) => {
-    const skillName = prompt("Enter skill name:");
-    if (!skillName) return;
-
-    setPortfolioData(prev => {
-      const updated = [...prev.skills];
-      updated[catIndex] = {
-        ...updated[catIndex],
-        items: [...updated[catIndex].items, skillName]
-      };
-      return { ...prev, skills: updated };
+    setCustomPrompt({
+      isOpen: true,
+      title: "Add New Skill",
+      fields: [{ key: 'name', label: 'Skill Name', defaultValue: '' }],
+      onSubmit: (values) => {
+        const skillName = values.name?.trim();
+        if (!skillName) return;
+        setPortfolioData(prev => {
+          const updated = [...prev.skills];
+          updated[catIndex] = {
+            ...updated[catIndex],
+            items: [...updated[catIndex].items, skillName]
+          };
+          return { ...prev, skills: updated };
+        });
+      }
     });
   };
 
@@ -224,35 +399,56 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
 
   const handleEditProject = (projIdx: number) => {
     const proj = portfolioData.projects[projIdx];
-    const newName = prompt("Edit Project Name:", proj.name);
-    const newDesc = prompt("Edit Short Description:", proj.description);
-    if (newName === null) return;
-
-    setPortfolioData(prev => {
-      const updated = [...prev.projects];
-      updated[projIdx] = {
-        ...updated[projIdx],
-        name: newName || proj.name,
-        description: newDesc || proj.description
-      };
-      return { ...prev, projects: updated };
+    setCustomPrompt({
+      isOpen: true,
+      title: "Edit Project Details",
+      fields: [
+        { key: 'name', label: 'Project Name', defaultValue: proj.name },
+        { key: 'description', label: 'Short Description', defaultValue: proj.description, type: 'textarea' },
+        { key: 'details', label: 'Project Details (from Resume)', defaultValue: proj.details || '', type: 'textarea' },
+        { key: 'challengesSolved', label: 'AI Highlight (Challenges Solved)', defaultValue: proj.challengesSolved || '', type: 'textarea' }
+      ],
+      onSubmit: (values) => {
+        const newName = values.name?.trim();
+        const newDesc = values.description?.trim();
+        const newDetails = values.details?.trim();
+        const newChallenges = values.challengesSolved?.trim();
+        setPortfolioData(prev => {
+          const updated = [...prev.projects];
+          updated[projIdx] = {
+            ...updated[projIdx],
+            name: newName || proj.name,
+            description: newDesc || proj.description,
+            details: newDetails || proj.details,
+            challengesSolved: newChallenges || proj.challengesSolved
+          };
+          return { ...prev, projects: updated };
+        });
+      }
     });
   };
 
   // Section 8: Upload handlers
   const handleResolveSuggestion = (id: string, type: string) => {
     if (type === 'github') {
-      const handle = prompt("Enter your GitHub profile URL:");
-      if (handle) {
-        setPortfolioData(prev => ({
-          ...prev,
-          socials: { ...prev.socials, github: handle }
-        }));
-        setSuggestions(prev => prev.map(s => s.id === id ? { ...s, done: true } : s));
-      }
+      setCustomPrompt({
+        isOpen: true,
+        title: "Link GitHub Profile",
+        fields: [{ key: 'handle', label: 'GitHub Profile URL or Username', defaultValue: '' }],
+        onSubmit: (values) => {
+          const handle = values.handle?.trim();
+          if (handle) {
+            setPortfolioData(prev => ({
+              ...prev,
+              socials: { ...prev.socials, github: handle }
+            }));
+            setSuggestions(prev => prev.map(s => s.id === id ? { ...s, done: true } : s));
+          }
+        }
+      });
     } else {
       // Mock photo/screenshots upload
-      alert('Mock file uploaded successfully!');
+      triggerToast('Mock file uploaded successfully!', 'success');
       setSuggestions(prev => prev.map(s => s.id === id ? { ...s, done: true } : s));
       setReadinessScore(prev => Math.min(prev + 2, 100));
     }
@@ -266,7 +462,10 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
         ...prev.basics,
         name: tempName,
         bio: tempBio,
-        tagline: tempTagline,
+        tagline: {
+          heading: tempTaglineHeading,
+          explanation: tempTaglineExplanation
+        },
         professionalTitle: tempTitle,
         location: tempLocation
       }
@@ -281,6 +480,14 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
   return (
     <div className="fixed inset-0 w-screen h-screen bg-[#070709] text-gray-200 z-40 flex flex-col font-sans select-none overflow-hidden">
       
+      {/* AI loading overlay */}
+      {loadingAI && (
+        <div className="fixed inset-0 bg-black/65 backdrop-blur-sm z-50 flex items-center justify-center flex-col space-y-4">
+          <RefreshCw className="h-8 w-8 text-purple-500 animate-spin" />
+          <p className="text-xs font-semibold text-white tracking-wider uppercase font-mono">{aiMessage}</p>
+        </div>
+      )}
+
       {/* Background glow effects */}
       <div className="absolute top-1/4 left-1/3 w-[600px] h-[600px] bg-purple-900/5 rounded-full filter blur-[150px] pointer-events-none -z-10" />
       <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-violet-950/5 rounded-full filter blur-[120px] pointer-events-none -z-10" />
@@ -304,24 +511,13 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
             </p>
           </div>
         </div>
-
-        {/* Proceed Button */}
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={handleNext}
-            className="px-5 py-2.5 bg-purple-650 hover:bg-purple-700 text-white text-xs font-bold rounded-xl flex items-center space-x-2 shadow-lg shadow-purple-950/30 transition transform hover:scale-[1.02]"
-          >
-            <span>Next: Personalize</span>
-            <ArrowRight className="h-3.5 w-3.5" />
-          </button>
-        </div>
       </header>
 
       {/* MAIN CONTENT SPLIT GRID */}
       <div className="flex-grow flex overflow-hidden">
         
         {/* LEFT COLUMN: The Interactive Form (Scrollable) */}
-        <div className="w-full lg:w-3/5 h-full overflow-y-auto p-6 space-y-6 scrollbar-thin">
+        <div className="w-full max-w-4xl mx-auto h-full overflow-y-auto p-6 space-y-6 scrollbar-thin">
           
           {/* Active section edit modal overlay */}
           <AnimatePresence>
@@ -357,11 +553,21 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-gray-400 mb-1.5">Tagline</label>
+                      <label className="block text-xs font-bold text-gray-400 mb-1.5">Tagline Heading</label>
                       <input 
                         type="text" 
-                        value={tempTagline} 
-                        onChange={(e) => setTempTagline(e.target.value)} 
+                        value={tempTaglineHeading} 
+                        onChange={(e) => setTempTaglineHeading(e.target.value)} 
+                        className="w-full px-3 py-2 bg-black/40 border border-white/5 rounded-xl text-xs text-white focus:outline-none focus:border-purple-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 mb-1.5">Tagline Explanation</label>
+                      <input 
+                        type="text" 
+                        value={tempTaglineExplanation} 
+                        onChange={(e) => setTempTaglineExplanation(e.target.value)} 
                         className="w-full px-3 py-2 bg-black/40 border border-white/5 rounded-xl text-xs text-white focus:outline-none focus:border-purple-500"
                       />
                     </div>
@@ -400,6 +606,86 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
                       Save Changes
                     </button>
                   </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
+          {/* Custom Input Dialog Modal */}
+          <AnimatePresence>
+            {customPrompt && customPrompt.isOpen && (
+              <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="w-full max-w-xl bg-zinc-950 border border-white/10 rounded-2xl p-6 shadow-2xl relative overflow-hidden backdrop-blur-md"
+                >
+                  {/* Decorative gradient overlay */}
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-indigo-500" />
+                  
+                  <h3 className="text-sm font-bold text-white mb-4 flex items-center space-x-2">
+                    <Sparkles className="h-4 w-4 text-purple-400" />
+                    <span>{customPrompt.title}</span>
+                  </h3>
+                  
+                  {customPrompt.description && (
+                    <p className="text-xs text-gray-400 mb-4">{customPrompt.description}</p>
+                  )}
+                  
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const form = e.currentTarget;
+                      const formData = new FormData(form);
+                      const values: Record<string, string> = {};
+                      customPrompt.fields.forEach(field => {
+                        values[field.key] = (formData.get(field.key) as string) || '';
+                      });
+                      customPrompt.onSubmit(values);
+                      setCustomPrompt(null);
+                    }}
+                    className="space-y-4"
+                  >
+                    {customPrompt.fields.map(field => (
+                      <div key={field.key}>
+                        <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-wider">{field.label}</label>
+                        {field.type === 'textarea' ? (
+                          <textarea
+                            name={field.key}
+                            defaultValue={field.defaultValue}
+                            rows={field.key === 'bio' || field.key === 'bullets' || field.key === 'details' || field.key === 'description' || field.key === 'challengesSolved' ? 8 : 4}
+                            autoFocus
+                            className="w-full bg-black/40 border border-white/5 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500 transition resize-y scrollbar-thin"
+                          />
+                        ) : (
+                          <input
+                            type="text"
+                            name={field.key}
+                            defaultValue={field.defaultValue}
+                            autoFocus
+                            className="w-full bg-black/40 border border-white/5 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500 transition"
+                          />
+                        )}
+                      </div>
+                    ))}
+                    
+                    <div className="flex items-center justify-end space-x-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setCustomPrompt(null)}
+                        className="px-4 py-2 border border-white/5 hover:bg-white/5 text-gray-400 text-xs font-bold rounded-xl transition"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-4 py-2 bg-purple-650 hover:bg-purple-700 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-purple-950/20"
+                      >
+                        Save
+                      </button>
+                    </div>
+                  </form>
                 </motion.div>
               </div>
             )}
@@ -477,8 +763,22 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
                   </button>
                   <button 
                     onClick={() => {
-                      setTempBio(portfolioData.basics.bio);
-                      setActiveEditSection('basics');
+                      setCustomPrompt({
+                        isOpen: true,
+                        title: "Edit Professional Summary",
+                        fields: [
+                          { key: 'bio', label: 'Biography / Summary', defaultValue: portfolioData.basics.bio, type: 'textarea' }
+                        ],
+                        onSubmit: (values) => {
+                          const newBio = values.bio?.trim();
+                          if (newBio) {
+                            setPortfolioData(prev => ({
+                              ...prev,
+                              basics: { ...prev.basics, bio: newBio }
+                            }));
+                          }
+                        }
+                      });
                     }}
                     className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/5 text-gray-300 hover:text-white text-[10px] font-bold rounded-lg flex items-center space-x-1.5 transition"
                   >
@@ -561,6 +861,25 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
                       </span>
                     ))}
                   </div>
+                </div>
+
+                <div className="pt-2">
+                  <button 
+                    onClick={() => {
+                      setTempName(portfolioData.basics.name);
+                      setTempTitle(portfolioData.basics.professionalTitle);
+                      setTempLocation(portfolioData.basics.location || '');
+                      setTempBio(portfolioData.basics.bio);
+                      const tagline = portfolioData.basics.tagline as any;
+                      setTempTaglineHeading(tagline && typeof tagline === 'object' ? tagline.heading : portfolioData.basics.professionalTitle || '');
+                      setTempTaglineExplanation(tagline && typeof tagline === 'object' ? tagline.explanation : typeof tagline === 'string' ? tagline : '');
+                      setActiveEditSection('basics');
+                    }}
+                    className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/5 text-gray-300 hover:text-white text-[10px] font-bold rounded-lg flex items-center space-x-1.5 transition"
+                  >
+                    <Edit3 className="h-3 w-3" />
+                    <span>Edit Profile Details</span>
+                  </button>
                 </div>
               </div>
             )}
@@ -683,6 +1002,12 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
 
                     <p className="text-xs text-gray-400 leading-relaxed">{proj.description}</p>
 
+                    {proj.details && (
+                      <p className="text-xs text-gray-400 leading-relaxed border-t border-white/5 pt-2 mt-2">
+                        {proj.details}
+                      </p>
+                    )}
+
                     <div className="flex flex-wrap gap-1">
                       {proj.techStack.map(t => (
                         <span key={t} className="text-[10px] bg-[#1a1a1f] border border-white/5 px-2 py-0.5 rounded-md font-medium text-gray-300">
@@ -707,7 +1032,7 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
             )}
           </div>
 
-          {/* SECTION 5: EXPERIENCE */}
+          {/* SECTION 5: INTERNSHIPS */}
           <div className="glass-panel border-white/5 bg-[#121215]/60 rounded-2xl overflow-hidden shadow-md">
             <div 
               onClick={() => toggleSection('experience')}
@@ -715,53 +1040,69 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
             >
               <div className="flex items-center space-x-2">
                 <Briefcase className="h-4 w-4 text-purple-400" />
-                <h3 className="text-sm font-bold text-white">Experience</h3>
-                <span className="text-[10px] bg-purple-950/40 border border-purple-500/20 px-2 py-0.5 rounded-full text-purple-400 font-bold">{portfolioData.experience.length} Found</span>
+                <h3 className="text-sm font-bold text-white">Internships</h3>
+                <span className="text-[10px] bg-purple-950/40 border border-purple-500/20 px-2 py-0.5 rounded-full text-purple-400 font-bold">{experienceItems.length} Found</span>
               </div>
               {expandedSections.experience ? <ChevronUp className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
             </div>
 
             {expandedSections.experience && (
               <div className="p-5 space-y-4 animate-fadeIn">
-                {portfolioData.experience.map((exp, idx) => (
-                  <div key={exp.company + exp.role} className="bg-black/20 border border-white/5 p-4 rounded-2xl space-y-3">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="text-sm font-bold text-white">{exp.role}</h4>
-                        <span className="text-xs text-purple-400 font-semibold">{exp.company} | {exp.duration}</span>
-                      </div>
-                      <button 
-                        onClick={() => {
-                          const newCompany = prompt("Edit Company Name:", exp.company);
-                          const newRole = prompt("Edit Role Title:", exp.role);
-                          if (newCompany || newRole) {
-                            setPortfolioData(prev => {
-                              const updated = [...prev.experience];
-                              updated[idx] = {
-                                ...updated[idx],
-                                company: newCompany || exp.company,
-                                role: newRole || exp.role
-                              };
-                              return { ...prev, experience: updated };
+                {experienceItems.map((exp) => {
+                  const originalIdx = portfolioData.experience.findIndex(e => e.company === exp.company && e.role === exp.role);
+                  return (
+                    <div key={exp.company + exp.role} className="bg-black/20 border border-white/5 p-4 rounded-2xl space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="text-sm font-bold text-white">{exp.role}</h4>
+                          <span className="text-xs text-purple-400 font-semibold">{exp.company} | {exp.duration}</span>
+                        </div>
+                        <button 
+                          onClick={() => {
+                            setCustomPrompt({
+                              isOpen: true,
+                              title: "Edit Internship Details",
+                              fields: [
+                                { key: 'role', label: 'Role Title', defaultValue: exp.role },
+                                { key: 'company', label: 'Company Name', defaultValue: exp.company },
+                                { key: 'bullets', label: 'Internship Highlights (One bullet per line)', defaultValue: exp.bullets.join('\n'), type: 'textarea' }
+                              ],
+                              onSubmit: (values) => {
+                                const newCompany = values.company?.trim();
+                                const newRole = values.role?.trim();
+                                const newBullets = values.bullets?.split('\n').map(b => b.trim()).filter(b => b !== '') || [];
+                                setPortfolioData(prev => {
+                                  const updated = [...prev.experience];
+                                  if (originalIdx !== -1) {
+                                    updated[originalIdx] = {
+                                      ...updated[originalIdx],
+                                      company: newCompany || exp.company,
+                                      role: newRole || exp.role,
+                                      bullets: newBullets.length > 0 ? newBullets : exp.bullets
+                                    };
+                                  }
+                                  return { ...prev, experience: updated };
+                                });
+                              }
                             });
-                          }
-                        }}
-                        className="p-1 text-gray-400 hover:text-white"
-                      >
-                        <Edit3 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
+                          }}
+                          className="p-1 text-gray-400 hover:text-white"
+                        >
+                          <Edit3 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
 
-                    <div className="space-y-1">
-                      <span className="text-[9px] uppercase font-bold text-gray-500 tracking-wider block">AI Generated Description</span>
-                      <ul className="list-disc pl-4 space-y-1 text-xs text-gray-400">
-                        {exp.bullets.map((b, i) => (
-                          <li key={i}>{b}</li>
-                        ))}
-                      </ul>
+                      <div className="space-y-1">
+                        <span className="text-[9px] uppercase font-bold text-gray-500 tracking-wider block">AI Generated Description</span>
+                        <ul className="list-disc pl-4 space-y-1 text-xs text-gray-400">
+                          {exp.bullets.map((b, i) => (
+                            <li key={i}>{b}</li>
+                          ))}
+                        </ul>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -790,14 +1131,33 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
                       </div>
                       <button 
                         onClick={() => {
-                          const newDegree = prompt("Edit Degree details:", edu.degree);
-                          if (newDegree) {
-                            setPortfolioData(prev => {
-                              const updated = [...prev.education];
-                              updated[idx] = { ...updated[idx], degree: newDegree };
-                              return { ...prev, education: updated };
-                            });
-                          }
+                          setCustomPrompt({
+                            isOpen: true,
+                            title: "Edit Education Details",
+                            fields: [
+                              { key: 'degree', label: 'Degree / Major', defaultValue: edu.degree },
+                              { key: 'institution', label: 'School / University', defaultValue: edu.institution },
+                              { key: 'duration', label: 'Duration (e.g. 2020 - 2024)', defaultValue: edu.duration },
+                              { key: 'highlights', label: 'Academic Highlights (One highlight per line)', defaultValue: edu.highlights.join('\n'), type: 'textarea' }
+                            ],
+                            onSubmit: (values) => {
+                              const newDegree = values.degree?.trim() || edu.degree;
+                              const newInstitution = values.institution?.trim() || edu.institution;
+                              const newDuration = values.duration?.trim() || edu.duration;
+                              const newHighlights = values.highlights?.split('\n').map(h => h.trim()).filter(h => h !== '') || [];
+                              setPortfolioData(prev => {
+                                const updated = [...prev.education];
+                                updated[idx] = {
+                                  ...updated[idx],
+                                  degree: newDegree,
+                                  institution: newInstitution,
+                                  duration: newDuration,
+                                  highlights: newHighlights
+                                };
+                                return { ...prev, education: updated };
+                              });
+                            }
+                          });
                         }}
                         className="p-1 text-gray-400 hover:text-white"
                       >
@@ -836,14 +1196,29 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
                     </div>
                     <button 
                       onClick={() => {
-                        const newTitle = prompt("Edit Achievement Title:", ach.title);
-                        if (newTitle) {
-                          setPortfolioData(prev => {
-                            const updated = [...prev.achievements];
-                            updated[idx] = { ...updated[idx], title: newTitle };
-                            return { ...prev, achievements: updated };
-                          });
-                        }
+                        setCustomPrompt({
+                          isOpen: true,
+                          title: "Edit Achievement Details",
+                          fields: [
+                            { key: 'title', label: 'Achievement Title', defaultValue: ach.title },
+                            { key: 'description', label: 'Description', defaultValue: ach.description || '', type: 'textarea' }
+                          ],
+                          onSubmit: (values) => {
+                            const newTitle = values.title?.trim();
+                            const newDesc = values.description?.trim();
+                            if (newTitle) {
+                              setPortfolioData(prev => {
+                                const updated = [...prev.achievements];
+                                updated[idx] = {
+                                  ...updated[idx],
+                                  title: newTitle,
+                                  description: newDesc || undefined
+                                };
+                                return { ...prev, achievements: updated };
+                              });
+                            }
+                          }
+                        });
                       }}
                       className="p-1 text-gray-400 hover:text-white shrink-0 ml-4"
                     >
@@ -926,15 +1301,7 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
                 </button>
               </div>
 
-              <div className="bg-black/20 border border-white/5 p-3.5 rounded-2xl flex flex-col justify-between space-y-3">
-                <p className="text-gray-300 font-medium">Expand technical abbreviations to improve SEO indexing.</p>
-                <button 
-                  onClick={handleExpandAbbreviations} 
-                  className="w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 text-[10px] font-bold rounded-xl transition"
-                >
-                  <span>Expand Abbreviations</span>
-                </button>
-              </div>
+
 
               <div className="bg-black/20 border border-white/5 p-3.5 rounded-2xl flex flex-col justify-between space-y-3">
                 <p className="text-gray-300 font-medium">Re-organize detected projects sorted by technical complexity.</p>
@@ -985,107 +1352,7 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
 
         </div>
 
-        {/* RIGHT COLUMN: Interactive Live mock homepage Bento preview (Section 11) */}
-        <div className="hidden lg:block w-2/5 h-full border-l border-white/5 bg-black/40 p-6 flex flex-col overflow-hidden">
-          
-          {/* Mock Browser Title bar */}
-          <div className="w-full bg-[#121215] border border-white/5 rounded-t-2xl px-4 py-3 flex items-center justify-between shrink-0">
-            <div className="flex items-center space-x-1.5">
-              <span className="w-3 h-3 rounded-full bg-red-500/40" />
-              <span className="w-3 h-3 rounded-full bg-yellow-500/40" />
-              <span className="w-3 h-3 rounded-full bg-green-500/40" />
-            </div>
-            
-            {/* mock URL */}
-            <div className="bg-black/40 border border-white/5 px-4 py-1.5 rounded-lg text-[10px] font-mono text-purple-400 w-3/5 text-center truncate">
-              localhost:5173/p/{themeSlug}
-            </div>
 
-            <div className="flex space-x-2">
-              <Maximize2 className="h-3.5 w-3.5 text-gray-600" />
-            </div>
-          </div>
-
-          {/* Mock website view area */}
-          <div className="flex-grow bg-[#09090b] border-x border-b border-white/5 p-4 overflow-y-auto scrollbar-thin rounded-b-2xl">
-            <div className="space-y-4 font-sans text-[11px] leading-relaxed">
-              
-              {/* Bento Grid Header Info */}
-              <div className="bg-[#121215]/80 border border-white/5 rounded-xl p-4 flex justify-between items-center">
-                <div className="space-y-1">
-                  <h4 className="text-sm font-extrabold text-white font-heading tracking-tight">
-                    {portfolioData.basics.name}
-                  </h4>
-                  <p className="text-[10px] text-purple-400 font-semibold">{portfolioData.basics.professionalTitle}</p>
-                  <p className="text-[9px] text-gray-500">{portfolioData.basics.location || 'San Francisco, CA'}</p>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-purple-650 border border-purple-500 flex items-center justify-center font-bold text-white shrink-0">
-                  {portfolioData.basics.name[0]}
-                </div>
-              </div>
-
-              {/* Bento Biography Block */}
-              <div className="bg-[#121215]/80 border border-white/5 rounded-xl p-4 space-y-1.5">
-                <span className="text-[9px] uppercase font-bold text-purple-400 tracking-wider">About Me</span>
-                <p className="text-gray-300 leading-normal">{portfolioData.basics.bio}</p>
-              </div>
-
-              {/* Bento Grid Projects block */}
-              <div className="space-y-2">
-                <span className="text-[9px] uppercase font-bold text-purple-400 tracking-wider px-1">Selected Portfolios</span>
-                <div className="grid grid-cols-2 gap-2">
-                  {portfolioData.projects.map(proj => (
-                    <div key={proj.name} className="bg-[#121215]/80 border border-white/5 rounded-xl p-3.5 flex flex-col justify-between min-h-[110px]">
-                      <div>
-                        <h5 className="font-bold text-white mb-1 truncate">{proj.name}</h5>
-                        <p className="text-[9px] text-gray-400 line-clamp-2 leading-relaxed">{proj.description}</p>
-                      </div>
-                      <div className="flex flex-wrap gap-0.5 pt-2">
-                        {proj.techStack.slice(0, 2).map(t => (
-                          <span key={t} className="text-[8px] bg-black/40 text-purple-300 px-1.5 py-0.5 rounded">
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Bento Skills Block */}
-              <div className="bg-[#121215]/80 border border-white/5 rounded-xl p-4 space-y-2">
-                <span className="text-[9px] uppercase font-bold text-purple-400 tracking-wider">Technical Toolbox</span>
-                <div className="flex flex-wrap gap-1">
-                  {portfolioData.skills.flatMap(cat => cat.items).slice(0, 8).map(skill => (
-                    <span key={skill} className="text-[9px] bg-black/40 border border-white/5 text-gray-300 px-2 py-0.5 rounded">
-                      {skill}
-                    </span>
-                  ))}
-                  {portfolioData.skills.flatMap(cat => cat.items).length > 8 && (
-                    <span className="text-[9px] text-gray-500 font-semibold px-1">+{portfolioData.skills.flatMap(cat => cat.items).length - 8} more</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Bento Experience item list */}
-              <div className="bg-[#121215]/80 border border-white/5 rounded-xl p-4 space-y-2">
-                <span className="text-[9px] uppercase font-bold text-purple-400 tracking-wider">Career Timeline</span>
-                <div className="space-y-2.5">
-                  {portfolioData.experience.slice(0, 2).map(exp => (
-                    <div key={exp.company + exp.role} className="border-l-2 border-purple-500/30 pl-2.5 space-y-0.5">
-                      <h5 className="font-bold text-white">{exp.role}</h5>
-                      <div className="flex justify-between text-[8px] text-gray-500">
-                        <span>{exp.company}</span>
-                        <span>{exp.duration}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </div>
 
       </div>
 
@@ -1103,10 +1370,11 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
             onClick={() => {
               if (confirm('Are you sure you want to reset all modifications to initial AI understanding?')) {
                 setPortfolioData(initialData);
-                setThemeSlug(slug);
                 setTempBio(initialData.basics.bio);
                 setTempTitle(initialData.basics.professionalTitle);
-                setTempTagline(initialData.basics.tagline);
+                const initTagline = initialData.basics.tagline as any;
+                setTempTaglineHeading(initTagline && typeof initTagline === 'object' ? initTagline.heading : initialData.basics.professionalTitle || '');
+                setTempTaglineExplanation(initTagline && typeof initTagline === 'object' ? initTagline.explanation : typeof initTagline === 'string' ? initTagline : '');
               }
             }}
             className="w-full sm:w-auto px-5 py-3 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/5 text-xs font-bold rounded-xl transition"
@@ -1123,6 +1391,31 @@ export const AIPortfolioReview: React.FC<AIPortfolioReviewProps> = ({
           </button>
         </div>
       </footer>
+
+      <AnimatePresence>
+        {toast && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className="fixed bottom-6 right-6 z-[9999]"
+          >
+            <div className={`px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-3 backdrop-blur-md border ${
+              toast.type === 'error' 
+                ? 'bg-red-950/70 border-red-500/30 text-red-200' 
+                : 'bg-green-950/70 border-green-500/30 text-green-200'
+            }`}>
+              {toast.type === 'error' ? (
+                <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
+              )}
+              <span className="text-xs font-semibold select-text">{toast.message}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
